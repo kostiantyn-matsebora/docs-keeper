@@ -5,7 +5,7 @@
       "hooks": [
         {
           "type": "command",
-          "command": "python3 \"${CLAUDE_PLUGIN_ROOT}/hooks/cc_session.py\" --snapshot-session",
+          "command": "sh \"${CLAUDE_PLUGIN_ROOT}/hooks/python_runner.sh\" \"${CLAUDE_PLUGIN_ROOT}/hooks/cc_session.py\" --snapshot-session",
           "timeout": 30
         }
       ]
@@ -17,7 +17,7 @@
       "hooks": [
         {
           "type": "command",
-          "command": "python3 \"${CLAUDE_PLUGIN_ROOT}/hooks/cc_maintenance.py\"",
+          "command": "sh \"${CLAUDE_PLUGIN_ROOT}/hooks/python_runner.sh\" \"${CLAUDE_PLUGIN_ROOT}/hooks/cc_maintenance.py\"",
           "timeout": 30
         }
       ]
@@ -29,7 +29,7 @@
       "hooks": [
         {
           "type": "command",
-          "command": "python3 \"${CLAUDE_PLUGIN_ROOT}/hooks/cc_session.py\" --mark-revised",
+          "command": "sh \"${CLAUDE_PLUGIN_ROOT}/hooks/python_runner.sh\" \"${CLAUDE_PLUGIN_ROOT}/hooks/cc_session.py\" --mark-revised",
           "timeout": 10
         }
       ]
@@ -41,7 +41,7 @@
       "hooks": [
         {
           "type": "command",
-          "command": "python3 \"${CLAUDE_PLUGIN_ROOT}/hooks/cc_capture.py\" --capture-from-summary",
+          "command": "sh \"${CLAUDE_PLUGIN_ROOT}/hooks/python_runner.sh\" \"${CLAUDE_PLUGIN_ROOT}/hooks/cc_capture.py\" --capture-from-summary",
           "timeout": 30
         }
       ]
@@ -53,7 +53,7 @@
       "hooks": [
         {
           "type": "command",
-          "command": "python3 \"${CLAUDE_PLUGIN_ROOT}/hooks/cc_session.py\" --track",
+          "command": "sh \"${CLAUDE_PLUGIN_ROOT}/hooks/python_runner.sh\" \"${CLAUDE_PLUGIN_ROOT}/hooks/cc_session.py\" --track",
           "timeout": 30
         }
       ]
@@ -65,7 +65,7 @@
       "hooks": [
         {
           "type": "command",
-          "command": "python3 \"${CLAUDE_PLUGIN_ROOT}/hooks/cc_session.py\" --session-end",
+          "command": "sh \"${CLAUDE_PLUGIN_ROOT}/hooks/python_runner.sh\" \"${CLAUDE_PLUGIN_ROOT}/hooks/cc_session.py\" --session-end",
           "timeout": 30
         }
       ]
