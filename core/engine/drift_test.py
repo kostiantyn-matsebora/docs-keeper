@@ -471,7 +471,7 @@ class DescribeResolveCommandQueue:
 
     def test_queues_docs_index_per_drifted_dir_trailing_slashed(self):
         queue = resolve_command_queue(["docs/api"], False)
-        assert queue[0]["command"] == "/docs-index"
+        assert queue[0]["command"] == "index"
         assert queue[0]["args"] == "docs/api/"
 
     def test_orders_drifted_dirs_lexically(self):
@@ -481,19 +481,19 @@ class DescribeResolveCommandQueue:
 
     def test_appends_a_single_docs_registry_sync_last_on_registry_drift(self):
         queue = resolve_command_queue(["docs/api"], True)
-        assert queue[-1]["command"] == "/docs-registry-sync"
+        assert queue[-1]["command"] == "registry-sync"
 
     def test_can_queue_registry_sync_alone(self):
         queue = resolve_command_queue([], True)
         assert len(queue) == 1
-        assert queue[0]["command"] == "/docs-registry-sync"
+        assert queue[0]["command"] == "registry-sync"
 
 
 class DescribeResolveReviseQueue:
     def test_emits_one_docs_revise_entry_carrying_all_paths_sorted(self):
         q = resolve_revise_queue(["docs/b.md", "docs/a.md"])
         assert len(q) == 1
-        assert q[0]["command"] == "/docs-revise"
+        assert q[0]["command"] == "revise"
         assert q[0]["args"] == "docs/a.md docs/b.md"
 
     def test_returns_empty_for_no_paths(self):
@@ -571,7 +571,7 @@ class DescribeGetDocsDriftQueue:
         files = dict(get_consistent_files())
         files["docs/api/index.md"] = new_index_md([])  # omits the present api-guidelines.md
         queue = get_docs_drift_queue(new_dir_lister(get_consistent_tree()), new_file_reader(files))
-        assert any(q["command"] == "/docs-index" and q["args"] == "docs/api/" for q in queue)
+        assert any(q["command"] == "index" and q["args"] == "docs/api/" for q in queue)
 
     def test_queues_docs_index_when_an_index_lists_a_now_absent_file(self):
         files = dict(get_consistent_files())
@@ -583,14 +583,14 @@ class DescribeGetDocsDriftQueue:
         files = dict(get_consistent_files())
         files["CLAUDE.md"] = "## Sources of truth\n\n- nothing here\n"
         queue = get_docs_drift_queue(new_dir_lister(get_consistent_tree()), new_file_reader(files))
-        assert any(q["command"] == "/docs-registry-sync" for q in queue)
+        assert any(q["command"] == "registry-sync" for q in queue)
 
     def test_queues_docs_registry_sync_when_AGENTS_md_is_the_host_file_and_omits_a_ROOT(self):
         files = dict(get_consistent_files())
         del files["CLAUDE.md"]
         files["AGENTS.md"] = "## Sources of truth\n\n- nothing here\n"
         queue = get_docs_drift_queue(new_dir_lister(get_consistent_tree()), new_file_reader(files))
-        assert any(q["command"] == "/docs-registry-sync" for q in queue)
+        assert any(q["command"] == "registry-sync" for q in queue)
 
     def test_returns_empty_when_nothing_under_the_scan_root_is_indexed(self):
         lister = new_dir_lister({".": [{"name": "docs", "is_dir": True}], "docs": [{"name": "loose.md", "is_dir": False}]})
@@ -606,8 +606,8 @@ class DescribeGetDocsDriftQueue:
             "CLAUDE.md": "## Sources of truth\n\n- [docs/](docs/) — Stale outdated role.\n",
         }
         queue = get_docs_drift_queue(new_dir_lister(tree), new_file_reader(files))
-        assert any(q["command"] == "/docs-registry-sync" for q in queue)
-        assert not any(q["command"] == "/docs-index" for q in queue)
+        assert any(q["command"] == "registry-sync" for q in queue)
+        assert not any(q["command"] == "index" for q in queue)
 
     def test_no_drift_when_the_ROOT_entry_role_text_contains_the_intro(self):
         tree = {
@@ -634,38 +634,46 @@ class DescribeFormatBlockMessage:
         assert format_block_message(None) == ""
 
     def test_formats_single_command_with_args(self):
-        msg = format_block_message([{"command": "/docs-index", "args": "docs/api/"}])
-        assert re.search(r"1\. /docs-index docs/api/", msg)
+        msg = format_block_message([{"command": "index", "args": "docs/api/"}])
+        assert re.search(r"1\. /index docs/api/", msg)
 
     def test_formats_single_command_without_args(self):
-        msg = format_block_message([{"command": "/docs-registry-sync", "args": ""}])
-        assert re.search(r"1\. /docs-registry-sync", msg)
-        assert "/docs-registry-sync " not in msg
+        msg = format_block_message([{"command": "registry-sync", "args": ""}])
+        assert re.search(r"1\. /registry-sync", msg)
+        assert "/registry-sync " not in msg
 
     def test_references_the_binding_gates_source(self):
-        msg = format_block_message([{"command": "/docs-registry-sync", "args": ""}])
+        msg = format_block_message([{"command": "registry-sync", "args": ""}])
         assert "docs-keeper" in msg
 
     def test_uses_re_commit_language_in_pre_commit_mode(self):
-        msg = format_block_message([{"command": "/docs-index", "args": "docs/"}], standalone=False)
+        msg = format_block_message([{"command": "index", "args": "docs/"}], standalone=False)
         assert "re-commit" in msg
 
     def test_uses_fix_language_in_standalone_mode_no_re_commit_mention(self):
-        msg = format_block_message([{"command": "/docs-index", "args": "docs/"}], standalone=True)
+        msg = format_block_message([{"command": "index", "args": "docs/"}], standalone=True)
         assert "Run the following commands to fix" in msg
         assert "re-commit" not in msg
 
     def test_uses_non_blocking_language_in_warn_mode(self):
-        msg = format_block_message([{"command": "/docs-revise", "args": "docs/a.md"}], mode="warn")
+        msg = format_block_message([{"command": "revise", "args": "docs/a.md"}], mode="warn")
         assert "non-blocking" in msg
         assert "drift detected" not in msg
 
     def test_adapter_can_override_the_binding_gates_footer(self):
         msg = format_block_message(
-            [{"command": "/docs-registry-sync", "args": ""}],
+            [{"command": "registry-sync", "args": ""}],
             binding_gates_ref="Binding gates: .claude/agents/docs-keeper.md",
         )
         assert ".claude/agents/docs-keeper.md" in msg
+
+    def test_default_command_prefix_is_a_bare_slash(self):
+        msg = format_block_message([{"command": "index", "args": "docs/"}])
+        assert re.search(r"1\. /index docs/", msg)
+
+    def test_adapter_can_namespace_command_tokens_via_prefix(self):
+        msg = format_block_message([{"command": "index", "args": "docs/"}], command_prefix="/docs-keeper:")
+        assert re.search(r"1\. /docs-keeper:index docs/", msg)
 
 
 # ---------------------------------------------------------------------------
@@ -770,7 +778,7 @@ class DescribeEvaluateCommitMaintenance:
         result = evaluate_commit_maintenance("git commit -m foo", "M\tdocs/SAD.md", {}, self.lister, self.reader)
         assert result["exit_code"] == 2
         assert result["reason"] == "docs-drift-detected"
-        assert result["queue"][0]["command"] == "/docs-revise"
+        assert result["queue"][0]["command"] == "revise"
         assert "docs/SAD.md" in result["queue"][0]["args"]
 
     def test_skips_revise_for_staged_md_already_marked_revised_true(self):
@@ -799,8 +807,8 @@ class DescribeEvaluateCommitMaintenance:
             "git commit -m foo", "M\tdocs/api/api-guidelines.md", {}, self.lister, new_file_reader(files)
         )
         assert result["exit_code"] == 2
-        assert result["queue"][0]["command"] == "/docs-revise"
-        assert any(q["command"] == "/docs-index" and q["args"] == "docs/api/" for q in result["queue"])
+        assert result["queue"][0]["command"] == "revise"
+        assert any(q["command"] == "index" and q["args"] == "docs/api/" for q in result["queue"])
 
     def test_message_surfaces_the_queue_contents(self):
         files = dict(get_consistent_files())
@@ -808,4 +816,4 @@ class DescribeEvaluateCommitMaintenance:
         result = evaluate_commit_maintenance(
             "git commit -m foo", "A\tdocs/design/components.md", {}, self.lister, new_file_reader(files)
         )
-        assert "/docs-index docs/design/" in result["message"]
+        assert "/index docs/design/" in result["message"]

@@ -22,6 +22,10 @@ from _engine_import import drift, gitio, session
 # Host-specific binding-gates footer for the installed plugin.
 CC_BINDING_GATES_REF = "Binding gates: docs-keeper agent (Non-overwrite policy + Hard rules)."
 
+# Claude Code namespaces plugin commands as /<plugin>:<command>; prepend it to the
+# engine's bare command tokens so block messages show runnable commands.
+CC_COMMAND_PREFIX = "/docs-keeper:"
+
 
 def invoke_docs_keeper_maintenance(
     hook_input_json: str = "",
@@ -80,6 +84,7 @@ def invoke_docs_keeper_maintenance(
         file_reader=file_reader,
         enforcement_mode=enforcement_mode,
         binding_gates_ref=CC_BINDING_GATES_REF,
+        command_prefix=CC_COMMAND_PREFIX,
     )
 
 
@@ -123,7 +128,9 @@ def main() -> None:
         drift_queue = drift.get_docs_drift_queue(dl, fr)
         if not drift_queue:
             sys.exit(0)
-        msg = drift.format_block_message(drift_queue, standalone=True, mode=mode, binding_gates_ref=CC_BINDING_GATES_REF)
+        msg = drift.format_block_message(
+            drift_queue, standalone=True, mode=mode, binding_gates_ref=CC_BINDING_GATES_REF, command_prefix=CC_COMMAND_PREFIX
+        )
         print(msg, file=sys.stderr)
         sys.exit(0 if mode == "warn" else 2)
 

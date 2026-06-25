@@ -1,11 +1,11 @@
-# docs-sweep — procedure
+# sweep — procedure
 
 Cross-doc consistency sweep — verify every sources-of-truth entry, walk every `index.md`
 children list (supports nested paths from recursive descent), flag orphans + broken links
-+ legacy-navigation READMEs, hand off drift to `docs-registry-sync`. Content-bearing
++ legacy-navigation READMEs, hand off drift to `registry-sync`. Content-bearing
 READMEs are regular files, not legacy. Mode C.
 
-> Platform-neutral procedure. The Claude Code adapter exposes it as `/docs-keeper:docs-sweep [optional-scope-path]`.
+> Platform-neutral procedure. The Claude Code adapter exposes it as `/docs-keeper:sweep [optional-scope-path]`.
 
 ## Pre-flight (binding)
 
@@ -31,7 +31,7 @@ before deciding what to flag. Default to content-bearing when ambiguous.
    index's `children:` chain AND NOT a registry unique-doc entry.
 4. Flag any **un-listed content-bearing README.md**: classified content-bearing but NOT in
    its nearest enclosing `index.md`'s `children:` (`/README` for a sibling, `/<sub>/README`
-   deeper). Owner adds it — or `docs-index <enclosing-dir>` picks it up.
+   deeper). Owner adds it — or `index <enclosing-dir>` picks it up.
 5. Flag any **broken cross-link**: a registry entry or `children:` path resolving to a
    non-existent file or directory.
 6. Flag any **ambiguous children resolution**: a `/<...>/<name>` matching BOTH `<name>.md`
@@ -42,9 +42,9 @@ before deciding what to flag. Default to content-bearing when ambiguous.
    `children:`.
 9. **Read-only.** Do NOT auto-rewrite cross-craft content. Report → wait for owner.
 10. **Hand off.**
-    - Registry drift (steps 1, 8) → propose `docs-registry-sync`.
+    - Registry drift (steps 1, 8) → propose `registry-sync`.
     - Index drift (missing `index.md`; broken/ambiguous `children:` from steps 2, 6;
-      un-listed content READMEs from step 4) → propose `docs-index <directory>` per affected
+      un-listed content READMEs from step 4) → propose `index <directory>` per affected
       directory.
     - Never silently edit.
 

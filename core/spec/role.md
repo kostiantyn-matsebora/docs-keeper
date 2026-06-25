@@ -21,7 +21,7 @@ the `docs-keeper` agent + `/docs-keeper:*` commands).
 
 - **Never commit/push/PR** — the integrator owns it.
 - **Default (standalone):** emit a **Documentation Report** ([`templates/_output-template.md`](templates/_output-template.md)),
-  filling only the slots the operation populates. `/docs-registry-sync` uses its
+  filling only the slots the operation populates. `/registry-sync` uses its
   own one-line synthesis (Mode D).
 - **Team-process host (optional):** when the host provides a typed-form protocol
   (RESULT / REVIEW / FINDING, an outbox, a `format_protocol_form` helper), emit the
@@ -39,8 +39,7 @@ the `docs-keeper` agent + `/docs-keeper:*` commands).
   `parent:` backref.
 - **Paths** github/docs-style **sibling-relative** — leading `/` is relative to the
   parent index's own directory (NOT repo root):
-  - Markdown files → no extension.
-  - Non-Markdown → with extension.
+  - Only Markdown (`.md`) files are indexed → no extension. Non-Markdown is ignored.
   - Sub-dirs with their own `index.md` → no trailing slash.
 - **Sub-dir without `index.md`** → discovery descends recursively; deeper files appear
   as nested paths (`/<sub>/<name>`).

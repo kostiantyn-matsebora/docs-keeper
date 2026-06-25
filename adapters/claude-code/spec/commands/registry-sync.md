@@ -1,9 +1,9 @@
-# docs-registry-sync — procedure
+# registry-sync — procedure
 
 Sync the host's "Sources of truth" registry to the current set of per-directory
 `index.md` indexes (github/docs-style children-list format). Mode D.
 
-> Platform-neutral procedure. The Claude Code adapter exposes it as `/docs-keeper:docs-registry-sync [--propose-only]`.
+> Platform-neutral procedure. The Claude Code adapter exposes it as `/docs-keeper:registry-sync [--propose-only]`.
 
 ## Pre-flight (binding)
 
@@ -146,4 +146,4 @@ checklist, Open questions, Next steps, per-step narration) unless the owner asks
 - **Owner-curated targets** still need owner sign-off on REMOVE.
 - **Preserve owner prose** — update only drifted parts (path, role).
 - **No new section.** Missing registry section → halt and ask.
-- **Do not delete legacy README.md** — flag for owner; let `docs-sweep` track them.
+- **Do not delete legacy README.md** — flag for owner; let `sweep` track them.

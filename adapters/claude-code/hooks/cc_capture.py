@@ -3,7 +3,7 @@ Claude Code adapter — doc-capture hook.
 
 Translates Claude Code skill/compaction events into core-engine capture writes:
 
-  --add-capture          (PostToolUse on Skill) : append /docs-capture content.
+  --add-capture          (PostToolUse on Skill) : append capture content.
   --capture-from-summary (PostCompact)          : record the compaction summary.
 
 Reads the CC payload from stdin (`session_id`, `tool_input.content`, `summary`).

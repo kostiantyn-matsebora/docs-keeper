@@ -293,7 +293,7 @@ def check_registry_role_in_sync(content: str, dir_path: str, intro: str) -> bool
 
 
 # ---------------------------------------------------------------------------
-# Mode B (docs-revise) helpers
+# Mode B (revise) helpers
 # ---------------------------------------------------------------------------
 
 
@@ -334,13 +334,16 @@ def get_intro_from_front_matter(content: str) -> str:
 
 def resolve_revise_queue(paths: list[str]) -> list[dict]:
     """
-    Return a single /docs-revise queue entry for all sorted paths,
-    or an empty list when paths is empty.
+    Return a single `revise` queue entry for all sorted paths, or an empty
+    list when paths is empty.
+
+    Command tokens are bare (no leading slash, no host namespace); adapters
+    prepend their own prefix via format_block_message(command_prefix=...).
     """
     if not paths:
         return []
     sorted_paths = sorted(paths)
-    return [{"command": "/docs-revise", "args": " ".join(sorted_paths)}]
+    return [{"command": "revise", "args": " ".join(sorted_paths)}]
 
 
 def resolve_enforcement_mode(env_value: str) -> str:
@@ -377,14 +380,15 @@ def resolve_command_queue(drifted_index_dirs: list[str], registry_drift: bool) -
     """
     Build the ordered command queue from drift results.
 
-    /docs-index entries come first (sorted by dir), then /docs-registry-sync.
+    `index` entries come first (sorted by dir), then `registry-sync`. Command
+    tokens are bare; adapters namespace them via format_block_message.
     """
     queue = []
     for d in sorted(drifted_index_dirs):
         args = d if d.endswith("/") else f"{d}/"
-        queue.append({"command": "/docs-index", "args": args})
+        queue.append({"command": "index", "args": args})
     if registry_drift:
-        queue.append({"command": "/docs-registry-sync", "args": ""})
+        queue.append({"command": "registry-sync", "args": ""})
     return queue
 
 
@@ -393,12 +397,14 @@ def format_block_message(
     standalone: bool = False,
     mode: str = "block",
     binding_gates_ref: str = BINDING_GATES_REF,
+    command_prefix: str = "/",
 ) -> str:
     """
     Format a human-readable block/warn message from the command queue.
 
-    Returns '' for empty/None queues. `binding_gates_ref` is the footer line;
-    adapters may pass a host-specific path.
+    Returns '' for empty/None queues. `binding_gates_ref` is the footer line
+    and `command_prefix` is prepended to each bare command token; adapters may
+    pass host-specific values (e.g. command_prefix="/docs-keeper:").
     """
     if not queue:
         return ""
@@ -414,7 +420,8 @@ def format_block_message(
 
     lines = [header, follow_up, ""]
     for i, item in enumerate(queue, start=1):
-        cmd = f"{item['command']} {item['args']}" if item.get("args") else item["command"]
+        name = f"{command_prefix}{item['command']}"
+        cmd = f"{name} {item['args']}" if item.get("args") else name
         lines.append(f"  {i}. {cmd}")
     lines.append("")
     lines.append(binding_gates_ref)
@@ -475,6 +482,7 @@ def evaluate_commit_maintenance(
     file_reader,
     enforcement_mode: str = "",
     binding_gates_ref: str = BINDING_GATES_REF,
+    command_prefix: str = "/",
 ) -> dict:
     """
     Platform-neutral commit-time maintenance evaluation.
@@ -514,5 +522,7 @@ def evaluate_commit_maintenance(
 
     exit_code = 0 if mode == "warn" else 2
     reason = "docs-action-suggested" if mode == "warn" else "docs-drift-detected"
-    msg = format_block_message(queue, standalone=False, mode=mode, binding_gates_ref=binding_gates_ref)
+    msg = format_block_message(
+        queue, standalone=False, mode=mode, binding_gates_ref=binding_gates_ref, command_prefix=command_prefix
+    )
     return {"exit_code": exit_code, "message": msg, "reason": reason, "queue": queue, "mode": mode}

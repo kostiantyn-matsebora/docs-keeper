@@ -8,7 +8,7 @@ calls. Five switches:
                                       unrevised files + pending captures.
   --session-end      (SessionEnd)   : GC per-session state; report captures.
   --track            (Stop)         : record session-edited .md into TrackedMd.
-  --mark-revised     (PostToolUse)  : mark /docs-revise targets revised.
+  --mark-revised     (PostToolUse)  : mark revise targets revised.
   --dismiss <path>                  : delete a tracker file.
 
 Reads the CC payload from stdin (`session_id`, `tool_input`). Always exits 0.
@@ -76,11 +76,11 @@ def main() -> None:
                 pass
         sys.exit(0)
 
-    # --mark-revised: mark files from a completed /docs-revise skill as revised.
+    # --mark-revised: mark files from a completed revise skill as revised.
     if args.mark_revised:
         try:
             tool_input = payload.get("tool_input") or {}
-            if str(tool_input.get("skill", "")) == "docs-revise":
+            if str(tool_input.get("skill", "")) == "revise":
                 args_str = str(tool_input.get("args", ""))
                 file_paths = [p for p in args_str.split() if p]
                 if file_paths:

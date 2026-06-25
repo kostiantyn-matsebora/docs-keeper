@@ -147,14 +147,14 @@ def format_session_start_proposal(unrevised_by_file: list[list[str]]) -> str:
         lines.append(f"  From session file {tracker_path}: {files}")
     lines.append("")
     lines.append("Options (reply with your choice):")
-    lines.append('  - "revise" — run /docs-revise on these files now')
+    lines.append('  - "revise" — run the revise command on these files now')
     lines.append('  - "snooze" — ask me again next session (tracker kept)')
     lines.append('  - "dismiss" — delete the tracker, never ask again')
     return "\n".join(lines)
 
 
 # ---------------------------------------------------------------------------
-# Pure functions: docs-capture surfacing (read side)
+# Pure functions: capture surfacing (read side)
 # ---------------------------------------------------------------------------
 
 

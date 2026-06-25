@@ -1,15 +1,15 @@
 # Documentation Report (template)
 
 Fill-in report used by all docs-keeper commands. Emit every applicable slot; omit empty
-slots — do not invent. `/docs-registry-sync` uses its own one-line synthesis (Mode D).
+slots — do not invent. `/registry-sync` uses its own one-line synthesis (Mode D).
 
 ## Documentation Report
 
 ### Mode
-A (index build) | B (authoring/revision) | C (consistency sweep) | D (registry sync)
+A (index build) | B (authoring/revision) | C (consistency sweep) | D (registry sync) | E (bootstrap)
 
 ### Command(s) invoked
-- `/docs-<name>` <args>  ➜  <one-line outcome>
+- `/docs-keeper:<name>` <args>  ➜  <one-line outcome>
 
 ### Host rules loaded from
 - <path>  ➜  quoted heading: "<verbatim heading>"

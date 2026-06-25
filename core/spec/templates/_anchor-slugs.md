@@ -1,6 +1,6 @@
 # Anchor slugs — quick reference (GFM / kramdown default)
 
-Used by `/docs-index` when composing `## Contents` TOC links. GitHub's Markdown renderer
+Used by `/index` when composing `## Contents` TOC links. GitHub's Markdown renderer
 (and kramdown via `auto_ids`) emits IDs that match GFM in the common cases. Each row
 demonstrates a different edge case.
 

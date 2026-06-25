@@ -1,9 +1,9 @@
-# docs-capture — procedure
+# capture — procedure
 
 Record documentation-worthy content from the current session into a persistent capture
 file, surfaced + applied in a later session.
 
-> Platform-neutral procedure. The Claude Code adapter exposes it as `/docs-keeper:docs-capture`
+> Platform-neutral procedure. The Claude Code adapter exposes it as `/docs-keeper:capture`
 > and wires the capture write to the bundled capture hook (`hooks/cc_capture.py --add-capture`).
 
 ## When to invoke

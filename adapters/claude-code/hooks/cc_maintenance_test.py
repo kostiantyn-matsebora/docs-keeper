@@ -72,7 +72,7 @@ class DescribeInvokeDocsKeeperMaintenanceIntegration:
         )
         assert result["exit_code"] == 2
         assert result["reason"] == "docs-drift-detected"
-        assert result["queue"][0]["command"] == "/docs-revise"
+        assert result["queue"][0]["command"] == "revise"
         assert "docs/SAD.md" in result["queue"][0]["args"]
 
     def test_skips_revise_for_staged_md_already_revised_true(self):
@@ -125,8 +125,10 @@ class DescribeInvokeDocsKeeperMaintenanceIntegration:
             session_reader=null_session_reader,
         )
         assert result["exit_code"] == 2
-        assert result["queue"][0]["command"] == "/docs-revise"
-        assert any(q["command"] == "/docs-index" and q["args"] == "docs/api/" for q in result["queue"])
+        assert result["queue"][0]["command"] == "revise"
+        assert any(q["command"] == "index" and q["args"] == "docs/api/" for q in result["queue"])
+        # adapter namespaces bare engine tokens for the user-facing message
+        assert "/docs-keeper:index docs/api/" in result["message"]
 
     def test_default_session_reader_merges_revised_true_from_a_cross_session_file(self, tmp_path):
         docs_keeper_dir = tmp_path / ".docs-keeper"

@@ -1,10 +1,10 @@
-# docs-index — procedure
+# index — procedure
 
 Build or refresh the `index.md` index for a target directory, performing a recursive
 descent (stopped at sub-index boundaries) to populate `children:`, then walk UP the
 directory tree to refresh every ancestor index in the same dispatch. Mode A.
 
-> Platform-neutral procedure. The Claude Code adapter exposes it as `/docs-keeper:docs-index <directory-path>`.
+> Platform-neutral procedure. The Claude Code adapter exposes it as `/docs-keeper:index <directory-path>`.
 
 ## Pre-flight (binding)
 
@@ -24,15 +24,15 @@ NOT halt the dispatch.
 
 ## Workflow shape (user-facing)
 
-`docs-index <dir>` creates / refreshes `<dir>/index.md` — and ONLY that file (plus
+`index <dir>` creates / refreshes `<dir>/index.md` — and ONLY that file (plus
 ancestor walk-up). It enumerates the entire descendant subtree under `<dir>` in one go,
 stopping its descent only when it hits a sub-directory that already has its OWN
 `index.md` (a boundary).
 
-- **Initial use** — owner runs `docs-index docs/` once. The result is a single `index.md`
+- **Initial use** — owner runs `index docs/` once. The result is a single `index.md`
   containing every doc reachable under `docs/`. Suitable for small/medium trees.
-- **Growth-by-splitting** — when the top index gets too big, run `docs-index docs/<sub>/`
-  to introduce a sub-index. Re-running `docs-index docs/` (or the automatic walk-up) now
+- **Growth-by-splitting** — when the top index gets too big, run `index docs/<sub>/`
+  to introduce a sub-index. Re-running `index docs/` (or the automatic walk-up) now
   stops at `/<sub>` instead of enumerating its contents → parent index shrinks.
 
 Boundaries compose: a deeply-nested `index.md` is a boundary for every ancestor above it.
@@ -133,7 +133,7 @@ Idempotent: running on an unchanged tree produces the same list byte-for-byte.
 
     Stops at the indexed-tree root (first ancestor without `index.md`). Linear, not
     recursive; each ancestor visited at most once.
-11. **Chain to `docs-registry-sync` (single, after walk-up completes).** Invoke ONCE at
+11. **Chain to `registry-sync` (single, after walk-up completes).** Invoke ONCE at
     the end — not per ancestor.
 
 ## Report (binding)

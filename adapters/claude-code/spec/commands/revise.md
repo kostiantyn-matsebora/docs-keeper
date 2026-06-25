@@ -1,9 +1,9 @@
-# docs-revise — procedure
+# revise — procedure
 
 Revise an existing doc or author a new one against host authoring rules. Extract over
 compact for files > 200 lines. Mode B. Without a path, targets all uncommitted doc files.
 
-> Platform-neutral procedure. The Claude Code adapter exposes it as `/docs-keeper:docs-revise [doc-path] [-- brief]`.
+> Platform-neutral procedure. The Claude Code adapter exposes it as `/docs-keeper:revise [doc-path] [-- brief]`.
 
 ## Target resolution (binding — runs before all steps)
 
@@ -31,8 +31,8 @@ Inherited from [`../role.md`](../role.md):
 5. **Apply the non-overwrite policy.** `Edit` with the minimum diff for revisions; propose
    first for full rewrites.
 6. **Refresh indexes.** After structural changes (added / removed / renamed / role-changed
-   files), invoke `docs-index <affected-directory>` — which refreshes the directory's
-   `index.md` and chains onward to `docs-registry-sync` as needed.
+   files), invoke `index <affected-directory>` — which refreshes the directory's
+   `index.md` and chains onward to `registry-sync` as needed.
 
 ## Report (binding)
 

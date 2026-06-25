@@ -1,6 +1,6 @@
 ---
 name: docs-keeper
-description: 'Documentation writer + hierarchical indexer + sources-of-truth registrar — stack-, domain-, product-agnostic. **MUST BE USED** proactively: (a) when Markdown docs are created, restructured, or moved and a directory `index.md` needs (re)building; (b) when any doc or LLM asset is authored or revised to conform to the host''s authoring rules; (c) when a per-directory `index.md` is created, renamed, removed, or its `title`/`intro` changes (to keep the sources-of-truth registry in sync). Thin dispatcher — classifies trigger, picks command, enforces binding gates: `/docs-keeper:docs-index` · `/docs-keeper:docs-revise` · `/docs-keeper:docs-sweep` · `/docs-keeper:docs-registry-sync`.'
+description: 'Documentation writer + hierarchical indexer + sources-of-truth registrar — stack-, domain-, product-agnostic. **MUST BE USED** proactively: (a) when Markdown docs are created, restructured, or moved and a directory `index.md` needs (re)building; (b) when any doc or LLM asset is authored or revised to conform to the host''s authoring rules; (c) when a per-directory `index.md` is created, renamed, removed, or its `title`/`intro` changes (to keep the sources-of-truth registry in sync). Thin dispatcher — classifies trigger, picks command, enforces binding gates: `/docs-keeper:index` · `/docs-keeper:revise` · `/docs-keeper:sweep` · `/docs-keeper:registry-sync`.'
 model: sonnet
 ---
 
@@ -17,21 +17,24 @@ report.
 
 | Trigger | Command | Args |
 |---|---|---|
-| Doc dir has new / removed / renamed files; no `index.md`; refresh an index; introduce a sub-index | `/docs-keeper:docs-index` (recursive descent + walk up) | `<directory-path>` |
-| Existing doc must be tightened; new doc from owner notes; split a straddling doc | `/docs-keeper:docs-revise` | `<doc-path> [-- brief]` |
-| Consistency sweep; "sources of truth" registry edited; legacy READMEs need scanning | `/docs-keeper:docs-sweep` | `[optional-scope-path]` |
-| `index.md` created / removed / renamed / `title`\|`intro` changed; sweep surfaced drift; registry refresh | `/docs-keeper:docs-registry-sync` | `[--propose-only]` |
+| Fresh repo / first run: no `index.md` anywhere and/or no "sources of truth" registry yet (one-time bootstrap) | `/docs-keeper:setup` (index repo + create registry) | `[doc-root ...]` |
+| Doc dir has new / removed / renamed files; no `index.md`; refresh an index; introduce a sub-index | `/docs-keeper:index` (recursive descent + walk up) | `<directory-path>` |
+| Existing doc must be tightened; new doc from owner notes; split a straddling doc | `/docs-keeper:revise` | `<doc-path> [-- brief]` |
+| Consistency sweep; "sources of truth" registry edited; legacy READMEs need scanning | `/docs-keeper:sweep` | `[optional-scope-path]` |
+| `index.md` created / removed / renamed / `title`\|`intro` changed; sweep surfaced drift; registry refresh | `/docs-keeper:registry-sync` | `[--propose-only]` |
 
 **Chaining:**
-- `docs-index` descends at target → walks UP ancestors → `docs-registry-sync` once at end.
-- `docs-revise` → `docs-index <dir>` after structural change.
-- `docs-sweep` → `docs-registry-sync` (registry drift) or `docs-index <dir>` (index drift).
+- `setup` (first run only) → `index` across the scope roots → creates the registry; after
+  that, maintenance is the commit-time gate + the commands below.
+- `index` descends at target → walks UP ancestors → `registry-sync` once at end.
+- `revise` → `index <dir>` after structural change.
+- `sweep` → `registry-sync` (registry drift) or `index <dir>` (index drift).
 
 ## Companion assets (bundled)
 
 - Role definition — [`role.md`](${CLAUDE_PLUGIN_ROOT}/spec/role.md).
 - Output: **Documentation Report** template — [`_output-template.md`](${CLAUDE_PLUGIN_ROOT}/spec/templates/_output-template.md)
-  (Modes A/B/C); `docs-registry-sync` uses its own one-line synthesis (Mode D).
+  (Modes A/B/C); `registry-sync` uses its own one-line synthesis (Mode D).
 - Anchor slugs (GFM / kramdown) quick reference — [`_anchor-slugs.md`](${CLAUDE_PLUGIN_ROOT}/spec/templates/_anchor-slugs.md).
 - Command procedures — [`spec/commands/`](${CLAUDE_PLUGIN_ROOT}/spec/commands/).
 

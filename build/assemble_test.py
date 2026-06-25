@@ -24,7 +24,7 @@ def _make_repo(tmp_path):
     (tmp_path / "core" / "spec").mkdir(parents=True)
     (tmp_path / "core" / "spec" / "role.md").write_text("# role\n", encoding="utf-8")
     (tmp_path / "core" / "spec" / "commands").mkdir()
-    (tmp_path / "core" / "spec" / "commands" / "docs-index.md").write_text("# index\n", encoding="utf-8")
+    (tmp_path / "core" / "spec" / "commands" / "index.md").write_text("# index\n", encoding="utf-8")
     for d in (ENGINE_DEST, SPEC_DEST):
         (tmp_path / Path(d).parent).mkdir(parents=True, exist_ok=True)
 
@@ -78,7 +78,7 @@ class DescribeVendorSpec:
         _make_repo(tmp_path)
         vendor_spec(str(tmp_path), check=False)
         assert (tmp_path / SPEC_DEST / "role.md").exists()
-        assert (tmp_path / SPEC_DEST / "commands" / "docs-index.md").exists()
+        assert (tmp_path / SPEC_DEST / "commands" / "index.md").exists()
 
     def test_check_reports_drift_when_a_spec_file_changes(self, tmp_path):
         _make_repo(tmp_path)

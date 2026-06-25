@@ -23,7 +23,7 @@ the first; this repo doubles as its own single-plugin marketplace.
 core/
   engine/      Platform-neutral Python engine (pure drift/session/capture + git/fs
                collaborators) + a neutral `cli.py --drift-only` for CI on any platform.
-  spec/        Platform-neutral spec: role.md, conventions/, the 5 command procedures,
+  spec/        Platform-neutral spec: role.md, conventions/, the 6 command procedures,
                and companion templates (Documentation Report, anchor slugs).
 adapters/
   claude-code/ The Claude Code plugin: .claude-plugin/plugin.json, thin hooks/cc_*.py
@@ -49,11 +49,24 @@ platform's hook payload into engine calls at the edge. CI enforces this.
 ```
 
 This registers the `docs-keeper` agent, the `/docs-keeper:*` commands
-(`docs-index` · `docs-revise` · `docs-sweep` · `docs-registry-sync` · `docs-capture`),
+(`setup` · `index` · `revise` · `sweep` · `registry-sync` · `capture`),
 and the SessionStart / PreToolUse / PostToolUse / PostCompact / Stop / SessionEnd hooks.
 
 Configure enforcement via the plugin's `DOCS_KEEPER_ENFORCE` user config (`warn` default,
 or `block` to fail commits on drift).
+
+### First run (bootstrap)
+
+Install registers the agent/commands/hooks but does not touch your repo. To reach a green
+baseline — index your docs and create the "sources of truth" registry — run once:
+
+```
+/docs-keeper:setup            # whole repo
+/docs-keeper:setup docs/      # or scope to specific doc roots
+```
+
+After that, the commit-time gate and `/docs-keeper:index` · `revise` · `sweep` ·
+`registry-sync` keep things in sync.
 
 ## Use without a platform (neutral CI gate)
 

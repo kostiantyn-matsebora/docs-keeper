@@ -67,7 +67,7 @@ class DescribeMarkRevised:
         (repo / "docs.md").write_text("# new doc\n")
         _run(["--track", "--repo-root", str(repo), "--session-id", sid], {"session_id": sid})
 
-        payload = {"session_id": sid, "tool_input": {"skill": "docs-revise", "args": "docs.md"}}
+        payload = {"session_id": sid, "tool_input": {"skill": "revise", "args": "docs.md"}}
         result = _run(["--mark-revised", "--repo-root", str(repo), "--session-id", sid], payload)
         assert result.returncode == 0
         data = json.loads((repo / ".docs-keeper" / f"session.{sid}.json").read_text())
