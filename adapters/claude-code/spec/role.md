@@ -82,11 +82,12 @@ A `README.md` next to an `index.md` is NOT automatically legacy:
 Leading `/` is sibling-relative to the parent `index.md`'s dir (NOT repo root); paths
 may nest (`/sub/file`) where discovery descended into a no-index sub-dir.
 
+Only Markdown (`.md`) files are indexed; non-Markdown files are never surfaced as children.
+
 | Child entry | Resolves to |
 |---|---|
-| `/…/<name>.<ext>` (has extension) | `<parent-dir>/…/<name>.<ext>` — non-Markdown file |
-| `/…/<name>` (no ext) + `<name>.md` exists | the `.md` file (`/README` → content-bearing `README.md`) |
-| `/…/<name>` (no ext) + `<name>/index.md` exists | the sub-dir index (boundary) |
+| `/…/<name>` + `<name>.md` exists | the `.md` file (`/README` → content-bearing `README.md`) |
+| `/…/<name>` + `<name>/index.md` exists | the sub-dir index (boundary) |
 | both `<name>.md` and `<name>/index.md` exist | **Ambiguous** — flag, do not auto-resolve |
 | neither exists | **Broken link** — flag |
 

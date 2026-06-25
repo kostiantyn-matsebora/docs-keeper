@@ -31,6 +31,6 @@ resolution*, § *README classification*, § *YAML front-matter quoting*). In bri
 
 - `index.md` (lowercase) per directory; `children:` YAML array is the index.
 - Leading `/` in a child path is **sibling-relative** to the index's own directory.
-- Markdown children drop the extension; non-Markdown keep it; sub-dirs with their own
-  `index.md` are boundaries (no descent).
+- Only Markdown (`.md`) files are indexed; children drop the extension. Non-Markdown
+  files are ignored. Sub-dirs with their own `index.md` are boundaries (no descent).
 - The host "sources of truth" registry lists only ROOT indexes + uncovered unique docs.

@@ -23,13 +23,12 @@ before deciding what to flag. Default to content-bearing when ambiguous.
    file(s) exist and the description still matches.
 2. Walk every `index.md` in the doc roots. Parse front-matter `children:` and resolve every
    entry (leading `/` is sibling-relative to the parent index's own directory; paths may be
-   NESTED like `/sub/file`):
-   - `/<a>/.../<name>.<ext>` → file `<parent-dir>/<a>/.../<name>.<ext>` must exist.
-   - `/<a>/.../<name>` (no ext) → try `<parent-dir>/<a>/.../<name>.md` first, then
+   NESTED like `/sub/file`). Only Markdown is indexed, so every entry is extension-less:
+   - `/<a>/.../<name>` → try `<parent-dir>/<a>/.../<name>.md` first, then
      `<parent-dir>/<a>/.../<name>/index.md`. Exactly one must exist; both → ambiguous;
      neither → broken.
-3. Flag any **orphan**: a doc-shaped file (`.md`, `.yaml`, `.html`, `.json` under doc roots)
-   NOT reachable from any index's `children:` chain AND NOT a registry unique-doc entry.
+3. Flag any **orphan**: a doc-shaped file (`.md` under doc roots) NOT reachable from any
+   index's `children:` chain AND NOT a registry unique-doc entry.
 4. Flag any **un-listed content-bearing README.md**: classified content-bearing but NOT in
    its nearest enclosing `index.md`'s `children:` (`/README` for a sibling, `/<sub>/README`
    deeper). Owner adds it — or `docs-index <enclosing-dir>` picks it up.

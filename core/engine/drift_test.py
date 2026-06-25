@@ -106,11 +106,13 @@ def get_consistent_tree() -> dict:
 def get_consistent_files() -> dict:
     return {
         "docs/index.md": new_index_md(["/SAD", "/FRONTEND_REQUIREMENTS", "/api", "/design"]),
-        "docs/api/index.md": new_index_md(["/openapi.yaml", "/api-guidelines"]),
+        # openapi.yaml is non-Markdown -> not indexed; only api-guidelines.md is a child.
+        "docs/api/index.md": new_index_md(["/api-guidelines"]),
         "docs/design/index.md": new_index_md(
             ["/README", "/design-tokens", "/components", "/views", "/behavior", "/data-model", "/libraries", "/mockup"]
         ),
-        "docs/design/mockup/index.md": new_index_md(["/index.html"]),
+        # mockup holds only index.html (non-Markdown) -> no Markdown children.
+        "docs/design/mockup/index.md": new_index_md([]),
         "CLAUDE.md": "# Project\n\n@.claude/team-process/conventions.md\n",
         ".claude/team-process/conventions.md": "## Sources of truth\n\n- [docs/](docs/) — x.\n\n## Other\n",
     }
@@ -330,12 +332,24 @@ class DescribeSetsEqual:
 
 
 class DescribeGetExpectedChildren:
-    def test_enumerates_direct_markdown_without_extension_and_yaml_with_extension(self):
+    def test_enumerates_direct_markdown_without_extension_and_excludes_non_markdown(self):
         result = get_expected_children("docs/api", new_dir_lister(get_consistent_tree()))
         assert "/api-guidelines" in result
-        assert "/openapi.yaml" in result
+        assert "/openapi.yaml" not in result  # non-Markdown -> not indexed
         assert "/index" not in result
-        assert len(result) == 2
+        assert len(result) == 1
+
+    def test_excludes_every_non_markdown_file_type(self):
+        tree = {
+            "docs": [
+                {"name": "page.md", "is_dir": False},
+                {"name": "openapi.yaml", "is_dir": False},
+                {"name": "mockup.html", "is_dir": False},
+                {"name": "data.json", "is_dir": False},
+            ]
+        }
+        result = get_expected_children("docs", new_dir_lister(tree))
+        assert result == ["/page"]
 
     def test_treats_a_sub_dir_holding_index_md_as_a_boundary_entry(self):
         result = get_expected_children("docs/design", new_dir_lister(get_consistent_tree()))
@@ -555,13 +569,13 @@ class DescribeGetDocsDriftQueue:
 
     def test_queues_docs_index_when_an_index_omits_a_present_file(self):
         files = dict(get_consistent_files())
-        files["docs/api/index.md"] = new_index_md(["/openapi.yaml"])
+        files["docs/api/index.md"] = new_index_md([])  # omits the present api-guidelines.md
         queue = get_docs_drift_queue(new_dir_lister(get_consistent_tree()), new_file_reader(files))
         assert any(q["command"] == "/docs-index" and q["args"] == "docs/api/" for q in queue)
 
     def test_queues_docs_index_when_an_index_lists_a_now_absent_file(self):
         files = dict(get_consistent_files())
-        files["docs/api/index.md"] = new_index_md(["/openapi.yaml", "/api-guidelines", "/ghost"])
+        files["docs/api/index.md"] = new_index_md(["/api-guidelines", "/ghost"])
         queue = get_docs_drift_queue(new_dir_lister(get_consistent_tree()), new_file_reader(files))
         assert any(q["args"] == "docs/api/" for q in queue)
 

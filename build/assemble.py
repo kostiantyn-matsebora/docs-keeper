@@ -120,7 +120,8 @@ def _read(path: str) -> str:
 
 def _write(path: str, content: str) -> None:
     os.makedirs(os.path.dirname(path), exist_ok=True)
-    with open(path, "w", encoding="utf-8") as fh:
+    # newline="\n" keeps vendored output LF-deterministic regardless of host OS.
+    with open(path, "w", encoding="utf-8", newline="\n") as fh:
         fh.write(content)
 
 

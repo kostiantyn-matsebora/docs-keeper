@@ -115,7 +115,7 @@ class DescribeInvokeDocsKeeperMaintenanceIntegration:
 
     def test_exits_2_with_both_revise_and_index_entries_when_an_index_is_drifted(self):
         files = dict(get_consistent_files())
-        files["docs/api/index.md"] = new_index_md(["/openapi.yaml"])
+        files["docs/api/index.md"] = new_index_md([])  # omits the present api-guidelines.md
         result = invoke_docs_keeper_maintenance(
             hook_input_json='{"tool_input":{"command":"git commit -m foo"}}',
             repo_root=".",

@@ -20,7 +20,7 @@ A (index build) | B (authoring/revision) | C (consistency sweep) | D (registry s
 ### Descent summary (if Mode A ran)
 - Target ➜ `<dir>/index.md`
 - Deepest path reached ➜ `<sub>/<sub>/<file>`
-- Files surfaced ➜ <count> (markdown <m>, non-markdown <n>)
+- Markdown files surfaced ➜ <count>
 - Boundaries encountered ➜ <count> (`<sub-a>`, `<sub-b>`, …)
 
 ### Walk-up trace (if Mode A ran)

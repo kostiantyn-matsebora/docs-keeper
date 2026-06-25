@@ -143,13 +143,15 @@ def get_expected_children(dir_path: str, dir_lister, prefix: str = "") -> list[s
     """
     Compute the expected children entries for a docs-keeper index directory.
 
+    Only Markdown (.md) files are indexed; non-Markdown files are ignored.
+
     Rules:
     - Hidden/underscore entries are skipped.
     - Sub-directory WITH index.md -> single boundary entry "/<prefix><name>".
     - Sub-directory WITHOUT index.md -> recurse, prefixing names.
     - index.md file itself -> skipped.
     - *.md files -> "/<prefix><basename>" (extension stripped).
-    - Other files -> "/<prefix><name>" (extension kept).
+    - Non-Markdown files -> skipped.
     """
     entries = []
     for entry in dir_lister(dir_path):
@@ -170,8 +172,7 @@ def get_expected_children(dir_path: str, dir_lister, prefix: str = "") -> list[s
             if name.endswith(".md"):
                 base = name[: -len(".md")]
                 entries.append(f"/{prefix}{base}")
-            else:
-                entries.append(f"/{prefix}{name}")
+            # Non-Markdown files are not indexed.
     return entries
 
 

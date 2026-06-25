@@ -47,17 +47,17 @@ Boundaries compose: a deeply-nested `index.md` is a boundary for every ancestor 
   sibling-relative to the index file's own directory (NOT the repo root). Entries may be
   nested (`/sub/name`) when the descent crossed a sub-dir that lacked its own `index.md`.
 
+   Only Markdown (`.md`) files are surfaced as children; non-Markdown files are ignored.
+
    | Child kind discovered during descent | Children entry | Resolves to |
    |---|---|---|
    | Direct Markdown file | `/<name>` | `<parent-dir>/<name>.md` |
-   | Direct non-Markdown file | `/<name>.<ext>` | `<parent-dir>/<name>.<ext>` |
    | Sub-directory with its own `index.md` (BOUNDARY — stop descent) | `/<name>` | `<parent-dir>/<name>/index.md` |
    | Markdown file inside a sub-dir WITHOUT `index.md` (descended into) | `/<sub>/<name>` | `<parent-dir>/<sub>/<name>.md` |
-   | Non-Markdown inside a sub-dir WITHOUT `index.md` | `/<sub>/<name>.<ext>` | `<parent-dir>/<sub>/<name>.<ext>` |
-   | Deeper nesting (all without indexes) | `/<a>/<b>/.../<name>[.<ext>]` | `<parent-dir>/<a>/<b>/.../<name>[.<ext>]` |
+   | Deeper nesting (all Markdown, all without indexes) | `/<a>/<b>/.../<name>` | `<parent-dir>/<a>/<b>/.../<name>.md` |
 
-   Resolution rule for any `/.../<name>` (no extension): try `<...>/<name>.md` first; if
-   not found, try `<...>/<name>/index.md`. Ambiguity (both exist) → flag as open question.
+   Resolution rule for any `/.../<name>`: try `<...>/<name>.md` first; if not found, try
+   `<...>/<name>/index.md`. Ambiguity (both exist) → flag as open question.
 
 - **Front-matter keys.** `title` (required), `intro` (required; ≤ 25 words;
   single-quoted), `shortTitle` (optional), `children` (required if descent yields
@@ -79,7 +79,7 @@ function visit(current, prefix, entries):
                 legacy-navigation: skip (surface separately)
                 content-bearing: add "/<prefix><base>" (no ext)
             else if Markdown: add "/<prefix><base>" (no ext)
-            else: add "/<prefix><name>.<ext>"
+            else: skip (non-Markdown — not indexed)
         elif child is a directory:
             if (child/index.md exists):
                 add "/<prefix><dir-name>"; do NOT recurse   # BOUNDARY
