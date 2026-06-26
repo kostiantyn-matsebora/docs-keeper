@@ -8,13 +8,5 @@
   },
   "license": "MIT",
   "keywords": ["documentation", "index", "markdown", "docs", "sources-of-truth", "drift"],
-  "hooks": "./hooks/hooks.json",
-  "userConfig": {
-    "DOCS_KEEPER_ENFORCE": {
-      "type": "string",
-      "enum": ["block", "warn"],
-      "default": "warn",
-      "description": "Commit-time drift gate enforcement: 'block' fails the commit (exit 2) on documentation drift; 'warn' surfaces the queue but never blocks (exit 0). Exported to the hooks as the DOCS_KEEPER_ENFORCE environment variable."
-    }
-  }
+  "hooks": "./hooks/hooks.json"
 }

@@ -12,12 +12,12 @@ import sys
 
 try:  # assembled / installed plugin: vendored _engine package beside the hooks
     sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-    from _engine import capture, drift, gitio, session  # type: ignore
+    from _engine import capture, config, drift, gitio, session  # type: ignore
 except ImportError:  # source repo: core/ at the repo root (…/adapters/claude-code/hooks)
     _repo_root = os.path.dirname(
         os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
     )
     sys.path.insert(0, _repo_root)
-    from core.engine import capture, drift, gitio, session  # type: ignore
+    from core.engine import capture, config, drift, gitio, session  # type: ignore
 
-__all__ = ["drift", "session", "capture", "gitio"]
+__all__ = ["drift", "session", "capture", "gitio", "config"]

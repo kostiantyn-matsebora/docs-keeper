@@ -9,7 +9,8 @@ stderr block message, `systemMessage` JSON on warn).
   PreToolUse mode (default): react to a `git commit` that stages markdown.
   --drift-only            : CI path; index + registry drift only.
 
-Enforcement (DOCS_KEEPER_ENFORCE): `block` (default; exit 2) or `warn` (exit 0).
+Enforcement (.docs-keeper/config.json `enforcement`): `block` (default; exit 2)
+or `warn` (exit 0).
 """
 
 import argparse
@@ -17,7 +18,7 @@ import json
 import os
 import sys
 
-from _engine_import import drift, gitio, session
+from _engine_import import config, drift, gitio, session
 
 # Host-specific binding-gates footer for the installed plugin.
 CC_BINDING_GATES_REF = "Binding gates: docs-keeper agent (Non-overwrite policy + Hard rules)."
@@ -119,7 +120,7 @@ def main() -> None:
         except Exception:  # noqa: BLE001
             hook_input_json = ""
 
-    enforcement_mode = os.environ.get("DOCS_KEEPER_ENFORCE", "")
+    enforcement_mode = config.get_enforcement_setting(config.load_config(gitio.make_file_reader(repo_root)))
     mode = drift.resolve_enforcement_mode(enforcement_mode)
 
     if args.drift_only:

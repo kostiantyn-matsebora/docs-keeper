@@ -52,8 +52,18 @@ This registers the `docs-keeper` agent, the `/docs-keeper:*` commands
 (`setup` · `index` · `revise` · `sweep` · `registry-sync` · `capture`),
 and the SessionStart / PreToolUse / PostToolUse / PostCompact / Stop / SessionEnd hooks.
 
-Configure enforcement via the plugin's `DOCS_KEEPER_ENFORCE` user config (`warn` default,
-or `block` to fail commits on drift).
+Configure enforcement via `.docs-keeper/config.json`, a per-repo settings file you commit
+alongside your docs:
+
+```json
+{
+  "enforcement": "warn"
+}
+```
+
+`warn` surfaces the drift queue without blocking; `block` fails the commit (exit 2) on
+drift. Defaults to `block` when the file or setting is absent. The rest of `.docs-keeper/`
+is per-machine runtime state and stays gitignored — only `config.json` is committed.
 
 ### First run (bootstrap)
 
