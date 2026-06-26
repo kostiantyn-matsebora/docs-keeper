@@ -18,11 +18,6 @@ on:
   workflow_dispatch:
   schedule:
     - cron: "0 6 * * 1" # weekly, Monday 06:00 UTC
-  # TEMPORARY: branch-scoped trigger to verify the workflow before it lands on
-  # the default branch (workflow_dispatch is only available from the default
-  # branch). Remove this push: block once verified.
-  push:
-    branches: [claude/docs-keeper-e2e-workflow-zmunho]
 
 permissions:
   contents: read
@@ -210,10 +205,15 @@ jobs:
 
       - name: Assert setup reached a green baseline
         run: |
-          set -euo pipefail
+          set -uo pipefail
+          echo "== .docs-keeper/config.json =="; cat "$EX/.docs-keeper/config.json" 2>/dev/null || echo "(none)"
+          echo "== index.md files =="; find "$EX" -name index.md -not -path '*/.git/*'
+          echo "== residual drift queue (expect none) =="
+          python3 "$DK/core/engine/cli.py" --drift-only --repo-root "$EX" --enforce block || true
+          set -e
           python3 "$DK/e2e/assert_e2e.py" setup --repo "$EX"
+          # Setup's contract is a green baseline: the drift gate must be clean.
           python3 "$DK/core/engine/cli.py" --drift-only --repo-root "$EX" --enforce block
-          echo "post-setup drift gate exit: $?"
 
       - name: Resolve an indexed directory to mutate
         run: |
@@ -222,62 +222,74 @@ jobs:
           echo "INDEX_DIR=${dir#./}" >> "$GITHUB_ENV"
           echo "Indexed dir under test: ${dir#./}"
 
-      # --- Phase 3: a code change, synchronized by the agent (commit gate) -----
-      - name: Make a code change and let the agent keep docs in sync
+      # --- Phase 3: a code change, AUTO-synchronized by the commit gate --------
+      # docs-keeper's strict-mode contract: the integrator just commits; the
+      # PreToolUse gate auto-detects drift, blocks, and the agent runs the queued
+      # *incremental* maintenance (index walk-up + registry-sync) before the
+      # commit can land. The test never names the maintenance command — the gate
+      # drives it. (The agent itself never commits; role.md § Hand back.)
+      - name: Strict mode — a code change is auto-synced when the integrator commits
         working-directory: ${{ env.EX }}
         run: |
           set -uo pipefail
-          # Enforce blocking so a premature commit is stopped by the PreToolUse gate.
+          # Strict mode: a drifting commit MUST be blocked until docs are synced.
           printf '{\n  "enforcement": "block",\n  "paths": ["**/*.md"]\n}\n' > .docs-keeper/config.json
+          echo "BASE_COMMITS_CODE=$(git rev-list --count HEAD)" >> "$GITHUB_ENV"
           # A code change: append to the first source file we find (else create one).
           src="$(find . -type f \( -name '*.py' -o -name '*.ts' -o -name '*.js' -o -name '*.go' -o -name '*.cs' -o -name '*.java' \) \
                   -not -path '*/node_modules/*' -not -path '*/.git/*' | head -n1)"
           if [ -z "$src" ]; then src="src/payments_processor.py"; mkdir -p src; fi
-          printf '\n# e2e: payments processor hook added by the e2e run\n' >> "$src"
-          # A new doc describing it — drift the agent must reconcile.
+          printf '\n# e2e: payments processor added by the e2e run\n' >> "$src"
+          # Its companion doc — not yet declared in the index, so the tree drifts.
           printf '# Payments processor\n\nProcesses payments for the Acme Stack.\n' > "${INDEX_DIR}/payments-processor.md"
-          claude -p "I changed the code file '$src' and added the doc '${INDEX_DIR}/payments-processor.md'. Keep the documentation synchronized: refresh the index.md indexes and the host 'Sources of truth' registry so there is no drift, then commit the result with git." \
+          git add -A
+          # Confirm the gate WOULD block this commit (drift present).
+          set +e; python3 "$DK/core/engine/cli.py" --drift-only --repo-root "$EX" --enforce block; gate=$?; set -e
+          test "$gate" -eq 2
+          # Integrator action: just commit. The gate auto-drives the sync.
+          claude -p "Commit the staged changes with a clear message. If a documentation drift gate blocks the commit, follow its instructions to synchronize the documentation, re-stage, and commit again. Do not bypass the gate (no --no-verify)." \
             --allowedTools "$DK_TOOLS" $DK_FLAGS > "$RUNNER_TEMP/code-change.json" 2>&1 || true
           cat "$RUNNER_TEMP/code-change.json"
           python3 "$DK/e2e/check_session.py" "$RUNNER_TEMP/code-change.json"
 
-      - name: Assert docs are synchronized after the code change
+      - name: Assert the code change was auto-synchronized and committed
         run: |
           set -euo pipefail
+          # Synchronized incrementally — the gate is clean again, no reindex-from-scratch.
           python3 "$DK/core/engine/cli.py" --drift-only --repo-root "$EX" --enforce block
           python3 "$DK/e2e/assert_e2e.py" index-declares \
             --index "$EX/${INDEX_DIR}/index.md" --child /payments-processor
-          echo "Commits since clone:"; git -C "$EX" log --oneline -n 5 || true
+          # The initially-blocked commit eventually landed (gate -> sync -> commit).
+          now="$(git -C "$EX" rev-list --count HEAD)"
+          echo "commits: base=$BASE_COMMITS_CODE now=$now"
+          test "$now" -gt "$BASE_COMMITS_CODE"
+          git -C "$EX" log --oneline -n 3
 
-      # --- Phase 4: a documentation change, drift detected then fixed ----------
-      - name: Add a new doc (creates drift) and assert the gate detects it
+      # --- Phase 4: a documentation change, AUTO-synchronized by the commit gate
+      - name: Strict mode — a documentation change is auto-synced when the integrator commits
         working-directory: ${{ env.EX }}
         run: |
           set -uo pipefail
+          echo "BASE_COMMITS_DOC=$(git rev-list --count HEAD)" >> "$GITHUB_ENV"
+          # Edit docs directly: a new doc the directory index does not declare yet.
           printf '# Refunds\n\nRefund handling for the Acme Stack.\n' > "${INDEX_DIR}/refunds.md"
-          set +e
-          python3 "$DK/core/engine/cli.py" --drift-only --repo-root "$EX" --enforce block
-          code=$?
-          set -e
-          echo "drift gate exit (expected 2): $code"
-          test "$code" -eq 2
-
-      - name: Run /docs-keeper:index and assert drift is resolved
-        working-directory: ${{ env.EX }}
-        run: |
-          set -uo pipefail
-          claude -p "/docs-keeper:index ${INDEX_DIR}/" --allowedTools "$DK_TOOLS" $DK_FLAGS \
-            > "$RUNNER_TEMP/doc-change.json" 2>&1 || true
+          git add -A
+          set +e; python3 "$DK/core/engine/cli.py" --drift-only --repo-root "$EX" --enforce block; gate=$?; set -e
+          test "$gate" -eq 2
+          claude -p "Commit the staged changes with a clear message. If a documentation drift gate blocks the commit, follow its instructions to synchronize the documentation, re-stage, and commit again. Do not bypass the gate (no --no-verify)." \
+            --allowedTools "$DK_TOOLS" $DK_FLAGS > "$RUNNER_TEMP/doc-change.json" 2>&1 || true
           cat "$RUNNER_TEMP/doc-change.json"
           python3 "$DK/e2e/check_session.py" "$RUNNER_TEMP/doc-change.json"
 
-      - name: Assert documentation is synchronized after the doc change
+      - name: Assert the documentation change was auto-synchronized and committed
         run: |
           set -euo pipefail
           python3 "$DK/core/engine/cli.py" --drift-only --repo-root "$EX" --enforce block
           python3 "$DK/e2e/assert_e2e.py" index-declares \
             --index "$EX/${INDEX_DIR}/index.md" --child /refunds
-          echo "documentation synchronized."
+          now="$(git -C "$EX" rev-list --count HEAD)"
+          echo "commits: base=$BASE_COMMITS_DOC now=$now"
+          test "$now" -gt "$BASE_COMMITS_DOC"
 
       - name: Upload session transcripts and resulting docs
         if: always()

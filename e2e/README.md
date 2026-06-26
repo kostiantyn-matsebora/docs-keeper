@@ -31,13 +31,20 @@ spends API tokens, so it is deliberately not on every push.
 
 1. **Install** — `assert_e2e.py install` checks `plugin.json`, `hooks.json` events, the agent,
    all seven `/docs-keeper:*` commands, and the vendored `_engine` + `spec` trees.
-2. **Setup** — `assert_e2e.py setup` checks `.docs-keeper/config.json` is created + valid, at
-   least one `index.md` was built, and the host prompt gained a "Sources of truth" section;
-   then the drift gate must be clean.
-3. **Code change** — a source edit + a new doc; the agent reconciles indexes/registry and
-   commits (through the commit gate); drift must end clean and the new doc declared.
-4. **Doc change** — a new doc creates drift (gate exits 2); `/docs-keeper:index` resolves it;
-   drift ends clean and the new doc is declared in its `index.md`.
+2. **Setup** — `assert_e2e.py setup` checks `.docs-keeper/config.json` is created + valid, the
+   per-directory `index.md` files were built, and the host prompt gained a "Sources of truth"
+   section; then the drift gate must be clean (green baseline).
+3. **Code change → auto-synced on commit** — a source edit + a new doc are staged; the session is
+   asked only to *commit*. In strict (`block`) mode the PreToolUse gate auto-detects drift, blocks,
+   and the agent runs the queued incremental maintenance (walk-up index + registry-sync) before
+   the integrator's commit can land. Asserts: gate first blocks (exit 2) → tree clean again → the
+   new doc is declared → the initially-blocked commit landed. **No explicit re-index.**
+4. **Doc change → auto-synced on commit** — same gate→sync→commit loop driven by a direct doc edit.
+
+> The change phases assert docs-keeper's real contract — the commit gate auto-drives *incremental*
+> synchronization; the agent never re-indexes from scratch and never commits (the integrator does).
+> See [`TEST_CASES.md`](TEST_CASES.md) for the full catalog and the open Findings (F1: installed
+> hooks fail to load; F2: setup leaves registry drift for a repo-root index).
 
 ## The assertion harness
 
