@@ -43,8 +43,12 @@ platform's hook payload into engine calls at the edge. CI enforces this.
 
 ## Install (Claude Code)
 
+docs-keeper is distributed from this repository as a single-plugin marketplace. The repo is
+**private** — `marketplace add` works for anyone with GitHub access to it (Claude Code uses
+your git credentials), so request access first if you don't have it.
+
 ```
-/plugin marketplace add <owner>/docs-keeper
+/plugin marketplace add kostiantyn-matsebora/docs-keeper
 /plugin install docs-keeper@docs-keeper
 ```
 
