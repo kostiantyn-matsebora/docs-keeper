@@ -33,6 +33,7 @@ decision verbs, or plugin-root references in `core/` (CI greps for `CLAUDE_PLUGI
 | Drift detection / children / registry / commit gate | `core/engine/drift.py` |
 | Session tracker lifecycle (snapshot/track/mark-revised/GC) | `core/engine/session.py` |
 | Doc-capture model + I/O | `core/engine/capture.py` |
+| Per-repo config reader (`.docs-keeper/config.json`: `enforcement`, `paths` globs) | `core/engine/config.py` |
 | git / dir-lister / file-reader factories | `core/engine/gitio.py` |
 | Neutral CI drift gate | `core/engine/cli.py` |
 | Role definition + index/authoring conventions + command procedures | `core/spec/` |

@@ -2,8 +2,8 @@
 """
 docs-keeper core engine — session tracker lifecycle (platform-neutral).
 
-Records which .md files were edited in a session and whether they have been
-revised, surfaces unrevised files / pending captures from prior sessions, and
+Records which watched/indexed files (default *.md) were edited in a session and
+whether they have been revised, surfaces unrevised files / pending captures, and
 cleans up per-session state. Pure functions + injectable git/file collaborators;
 no host payload shapes or hook decision verbs.
 """
@@ -13,12 +13,12 @@ import re
 from pathlib import Path
 
 from .capture import get_docs_capture_file_path, read_docs_capture
-from .drift import get_safe_session_id, is_markdown_path
+from .drift import get_safe_session_id, path_matches_globs
 
 __all__ = [
     "convert_from_git_porcelain",
     "get_session_edited_paths",
-    "select_markdown_paths",
+    "select_indexed_paths",
     "add_tracked_md_files",
     "set_tracked_md_revised",
     "format_session_start_proposal",
@@ -88,9 +88,9 @@ def get_session_edited_paths(
     return result
 
 
-def select_markdown_paths(paths: list[str]) -> list[str]:
-    """Filter a list of paths to only .md files."""
-    return [p for p in paths if is_markdown_path(p)]
+def select_indexed_paths(paths: list[str], index_globs: tuple | list | None = None) -> list[str]:
+    """Filter paths to those matching the watch/index globs (default **/*.md)."""
+    return [p for p in paths if path_matches_globs(p, index_globs)]
 
 
 # ---------------------------------------------------------------------------

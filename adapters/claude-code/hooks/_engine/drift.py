@@ -24,6 +24,10 @@ EXCLUDE_DIRS_DEFAULT = frozenset(
     {"node_modules", "dist", "build", "bin", "obj", "vendor", "out", ".next", ".nuxt", "coverage", "target"}
 )
 
+# Default watch/index scope: every Markdown file at any depth. Overridable via
+# the `paths` glob list in .docs-keeper/config.json (config.get_index_globs).
+INDEX_GLOBS_DEFAULT = ("**/*.md",)
+
 # Neutral binding-gates reference. Adapters may override with a host-specific
 # path (e.g. the installed plugin's agent file) via format_block_message.
 BINDING_GATES_REF = "Binding gates: docs-keeper role spec sections Non-overwrite policy + Hard rules."
@@ -108,11 +112,55 @@ def is_markdown_path(path: str | None) -> bool:
     return path.endswith(".md")
 
 
-def touches_indexed_content(changes: list[dict]) -> bool:
-    """Return True when any change record involves a .md file."""
+def _glob_to_regex(pattern: str) -> str:
+    """
+    Translate a path glob into an anchored regex string (POSIX `/` separators).
+
+    Supports `**/` (zero or more path segments), `**` (anything), `*` (anything
+    within a segment), and `?` (one non-separator char). Everything else is a
+    literal.
+    """
+    i, n, out = 0, len(pattern), []
+    while i < n:
+        if pattern[i] == "*":
+            if pattern[i:i + 2] == "**":
+                if pattern[i:i + 3] == "**/":
+                    out.append("(?:[^/]+/)*")  # zero or more whole path segments
+                    i += 3
+                else:
+                    out.append(".*")
+                    i += 2
+            else:
+                out.append("[^/]*")  # within a single path segment
+                i += 1
+        elif pattern[i] == "?":
+            out.append("[^/]")
+            i += 1
+        else:
+            out.append(re.escape(pattern[i]))
+            i += 1
+    return "(?s:" + "".join(out) + r")\Z"
+
+
+def path_matches_globs(path: str | None, index_globs: tuple | list | None = None) -> bool:
+    """
+    Return True when path matches any of index_globs (default INDEX_GLOBS_DEFAULT).
+
+    This is the single watch/index membership test: a repo-relative path is
+    "indexed content" iff it matches a configured glob. A leading `./` is ignored.
+    """
+    if not path:
+        return False
+    globs = index_globs or INDEX_GLOBS_DEFAULT
+    candidate = path[2:] if path.startswith("./") else path
+    return any(re.match(_glob_to_regex(p), candidate) for p in globs)
+
+
+def touches_indexed_content(changes: list[dict], index_globs: tuple | list | None = None) -> bool:
+    """Return True when any change record involves a watched/indexed file."""
     for change in changes:
         for p in (change.get("path"), change.get("old_path")):
-            if is_markdown_path(p):
+            if path_matches_globs(p, index_globs):
                 return True
     return False
 
@@ -140,19 +188,28 @@ def find_host_root_prompt_file(file_reader) -> str:
     return ""
 
 
-def get_expected_children(dir_path: str, dir_lister, prefix: str = "") -> list[str]:
+def _index_entry_slug(name: str) -> str:
+    """Drop the final extension for the index child slug (foo.md -> foo)."""
+    dot = name.rfind(".")
+    return name[:dot] if dot > 0 else name
+
+
+def get_expected_children(
+    dir_path: str, dir_lister, prefix: str = "", index_globs: tuple | list | None = None
+) -> list[str]:
     """
     Compute the expected children entries for a docs-keeper index directory.
 
-    Only Markdown (.md) files are indexed; non-Markdown files are ignored.
+    Only files matching index_globs (default INDEX_GLOBS_DEFAULT, i.e. *.md) are
+    indexed; non-matching files are ignored.
 
     Rules:
     - Hidden/underscore entries are skipped.
     - Sub-directory WITH index.md -> single boundary entry "/<prefix><name>".
     - Sub-directory WITHOUT index.md -> recurse, prefixing names.
     - index.md file itself -> skipped.
-    - *.md files -> "/<prefix><basename>" (extension stripped).
-    - Non-Markdown files -> skipped.
+    - Matching files -> "/<prefix><basename>" (extension stripped).
+    - Non-matching files -> skipped.
     """
     entries = []
     for entry in dir_lister(dir_path):
@@ -166,14 +223,14 @@ def get_expected_children(dir_path: str, dir_lister, prefix: str = "") -> list[s
             if has_index:
                 entries.append(f"/{prefix}{name}")
             else:
-                entries.extend(get_expected_children(child_dir, dir_lister, f"{prefix}{name}/"))
+                entries.extend(get_expected_children(child_dir, dir_lister, f"{prefix}{name}/", index_globs))
         else:
             if name == "index.md":
                 continue
-            if name.endswith(".md"):
-                base = name[: -len(".md")]
-                entries.append(f"/{prefix}{base}")
-            # Non-Markdown files are not indexed.
+            file_path = name if dir_path == "." else f"{dir_path}/{name}"
+            if path_matches_globs(file_path, index_globs):
+                entries.append(f"/{prefix}{_index_entry_slug(name)}")
+            # Non-matching files are not indexed.
     return entries
 
 
@@ -439,6 +496,7 @@ def get_docs_drift_queue(
     file_reader,
     docs_root: str = ".",
     exclude_dirs: frozenset | set = EXCLUDE_DIRS_DEFAULT,
+    index_globs: tuple | list | None = None,
 ) -> list[dict]:
     """
     Compute the full drift queue (index + registry) for the docs tree.
@@ -451,7 +509,7 @@ def get_docs_drift_queue(
 
     drifted = []
     for d in index_dirs:
-        expected = get_expected_children(d, dir_lister)
+        expected = get_expected_children(d, dir_lister, index_globs=index_globs)
         index_path = "index.md" if d == "." else f"{d}/index.md"
         declared = get_declared_children(file_reader(index_path))
         if not sets_equal(expected, declared):
@@ -484,6 +542,7 @@ def evaluate_commit_maintenance(
     enforcement_mode: str = "",
     binding_gates_ref: str = BINDING_GATES_REF,
     command_prefix: str = "/",
+    index_globs: tuple | list | None = None,
 ) -> dict:
     """
     Platform-neutral commit-time maintenance evaluation.
@@ -501,21 +560,21 @@ def evaluate_commit_maintenance(
         return {"exit_code": 0, "message": "", "reason": "not-git-commit", "queue": [], "mode": mode}
 
     changes = convert_git_name_status(name_status)
-    if not touches_indexed_content(changes):
+    if not touches_indexed_content(changes, index_globs):
         return {"exit_code": 0, "message": "", "reason": "no-docs-change", "queue": [], "mode": mode}
 
     staged = []
     seen = set()
     for change in changes:
         p = change.get("path")
-        if is_markdown_path(p) and p not in seen:
+        if path_matches_globs(p, index_globs) and p not in seen:
             staged.append(p)
             seen.add(p)
 
     tracked_md = session_tracked_md or {}
     revise_md = [p for p in staged if not tracked_md.get(p, {}).get("revised", False)]
 
-    drift_queue = get_docs_drift_queue(dir_lister, file_reader)
+    drift_queue = get_docs_drift_queue(dir_lister, file_reader, index_globs=index_globs)
     queue = resolve_revise_queue(revise_md) + drift_queue
 
     if not queue:

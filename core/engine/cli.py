@@ -16,19 +16,21 @@ import os
 import sys
 
 try:  # package context (python3 -m core.engine.cli, or the vendored _engine package)
+    from .config import get_enforcement_setting, get_index_globs, load_config
     from .drift import format_block_message, get_docs_drift_queue, resolve_enforcement_mode
     from .gitio import make_dir_lister, make_file_reader, resolve_repo_root_from_git
 except ImportError:  # script context (python3 <…>/cli.py) — flat sibling import, location-independent
     sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+    from config import get_enforcement_setting, get_index_globs, load_config
     from drift import format_block_message, get_docs_drift_queue, resolve_enforcement_mode
     from gitio import make_dir_lister, make_file_reader, resolve_repo_root_from_git
 
 
-def run_drift_only(repo_root: str, enforcement_mode: str) -> int:
+def run_drift_only(repo_root: str, enforcement_mode: str, index_globs=None) -> int:
     """Compute drift and return the exit code; prints the message to stderr."""
     dir_lister = make_dir_lister(repo_root)
     file_reader = make_file_reader(repo_root)
-    queue = get_docs_drift_queue(dir_lister, file_reader)
+    queue = get_docs_drift_queue(dir_lister, file_reader, index_globs=index_globs)
     if not queue:
         return 0
     mode = resolve_enforcement_mode(enforcement_mode)
@@ -45,15 +47,17 @@ def main() -> None:
         "--enforce",
         default="",
         help="Enforcement: 'warn' (exit 0) or 'block' (exit 2 on drift). "
-        "Defaults to the DOCS_KEEPER_ENFORCE env var, else 'block'.",
+        "Defaults to the 'enforcement' setting in .docs-keeper/config.json, else 'block'.",
     )
     args = parser.parse_args()
 
     repo_root = args.repo_root or resolve_repo_root_from_git() or os.getcwd()
-    enforcement_mode = args.enforce or os.environ.get("DOCS_KEEPER_ENFORCE", "")
+    config = load_config(make_file_reader(repo_root))
+    enforcement_mode = args.enforce or get_enforcement_setting(config)
+    index_globs = get_index_globs(config)
 
     if args.drift_only:
-        sys.exit(run_drift_only(repo_root, enforcement_mode))
+        sys.exit(run_drift_only(repo_root, enforcement_mode, index_globs))
 
     parser.print_help()
     sys.exit(0)

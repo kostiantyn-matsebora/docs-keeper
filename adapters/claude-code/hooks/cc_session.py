@@ -7,7 +7,7 @@ calls. Five switches:
   --snapshot-session (SessionStart) : baseline HEAD + dirty set; surface
                                       unrevised files + pending captures.
   --session-end      (SessionEnd)   : GC per-session state; report captures.
-  --track            (Stop)         : record session-edited .md into TrackedMd.
+  --track            (Stop)         : record session-edited watched files into TrackedMd.
   --mark-revised     (PostToolUse)  : mark revise targets revised.
   --dismiss <path>                  : delete a tracker file.
 
@@ -20,7 +20,7 @@ import os
 import sys
 from pathlib import Path
 
-from _engine_import import drift, gitio, session
+from _engine_import import config, drift, gitio, session
 
 
 def read_payload() -> dict:
@@ -93,9 +93,10 @@ def main() -> None:
             pass
         sys.exit(0)
 
-    # --track: record session-edited .md files into TrackedMd.
+    # --track: record session-edited watched/indexed files into TrackedMd.
     if args.track:
         try:
+            index_globs = config.get_index_globs(config.load_config(gitio.make_file_reader(repo_root)))
             state = session.read_docs_keeper_session(repo_root, session_id)
             if state is None:
                 state = {"Head": "", "Dirty": [], "TrackedMd": {}}
@@ -109,10 +110,12 @@ def main() -> None:
                 session_paths = session.get_session_edited_paths(
                     committed, current_dirty, list(state.get("Dirty") or [])
                 )
-                md_paths = session.select_markdown_paths(session_paths)
+                md_paths = session.select_indexed_paths(session_paths, index_globs)
             else:
                 dirty_raw = runner(["status", "--porcelain"])
-                md_paths = session.select_markdown_paths(session.convert_from_git_porcelain(dirty_raw or ""))
+                md_paths = session.select_indexed_paths(
+                    session.convert_from_git_porcelain(dirty_raw or ""), index_globs
+                )
 
             if md_paths:
                 state = session.add_tracked_md_files(state, md_paths)

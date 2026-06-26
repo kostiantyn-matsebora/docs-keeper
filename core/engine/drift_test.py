@@ -27,6 +27,7 @@ from core.engine.drift import (
     is_git_commit,
     is_hidden_name,
     is_markdown_path,
+    path_matches_globs,
     read_hook_payload,
     resolve_command_queue,
     resolve_enforcement_mode,
@@ -383,6 +384,18 @@ class DescribeGetExpectedChildren:
         assert len(result) == 1
         assert "/real" in result
 
+    def test_custom_globs_index_other_extensions_and_strip_them(self):
+        tree = {
+            "docs": [
+                {"name": "page.md", "is_dir": False},
+                {"name": "widget.mdx", "is_dir": False},
+                {"name": "data.json", "is_dir": False},
+            ]
+        }
+        # globs scoped to .mdx -> only widget.mdx is indexed, extension stripped.
+        result = get_expected_children("docs", new_dir_lister(tree), index_globs=["**/*.mdx"])
+        assert result == ["/widget"]
+
 
 class DescribeGetIndexDirs:
     def test_finds_every_directory_holding_an_index_md_under_docs(self):
@@ -515,6 +528,42 @@ class DescribeResolveEnforcementMode:
 
     def test_maps_the_retired_auto_value_to_block(self):
         assert resolve_enforcement_mode("auto") == "block"
+
+
+class DescribePathMatchesGlobs:
+    def test_default_matches_md_at_any_depth(self):
+        assert path_matches_globs("README.md")
+        assert path_matches_globs("docs/api/guide.md")
+
+    def test_default_rejects_non_md(self):
+        assert not path_matches_globs("docs/api/openapi.yaml")
+        assert not path_matches_globs("src/Program.cs")
+
+    def test_none_and_empty_path_are_false(self):
+        assert not path_matches_globs(None)
+        assert not path_matches_globs("")
+
+    def test_ignores_leading_dot_slash(self):
+        assert path_matches_globs("./docs/x.md")
+
+    def test_single_star_stays_within_a_segment(self):
+        assert path_matches_globs("notes.md", ["*.md"])
+        assert not path_matches_globs("docs/notes.md", ["*.md"])
+
+    def test_double_star_prefix_scopes_to_a_subtree(self):
+        assert path_matches_globs("docs/api/guide.md", ["docs/**/*.md"])
+        assert path_matches_globs("docs/guide.md", ["docs/**/*.md"])
+        assert not path_matches_globs("adr/guide.md", ["docs/**/*.md"])
+
+    def test_matches_any_of_several_globs(self):
+        globs = ["docs/**/*.md", "**/*.mdx"]
+        assert path_matches_globs("docs/a/b.md", globs)
+        assert path_matches_globs("site/page.mdx", globs)
+        assert not path_matches_globs("notes.txt", globs)
+
+    def test_question_mark_matches_one_non_separator_char(self):
+        assert path_matches_globs("a1.md", ["a?.md"])
+        assert not path_matches_globs("a/.md", ["a?.md"])
 
 
 # ---------------------------------------------------------------------------
