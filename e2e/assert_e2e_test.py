@@ -12,6 +12,7 @@ from e2e.assert_e2e import (
     check_setup,
     find_host_prompt,
     find_index_files,
+    frontmatter_unquoted_flow_keys,
     has_registry_section,
     parse_declared_children,
     validate_config,
@@ -190,6 +191,20 @@ class DescribeCheckSetup:
         _make_setup_repo(tmp_path, registry=False)
         results = check_setup(str(tmp_path))
         assert any(not ok and "Sources of truth" in msg for ok, msg in results)
+
+
+class DescribeFrontmatterUnquotedFlowKeys:
+    def test_flags_unquoted_double_bracket(self):
+        text = "---\ndescription: x\nargument-hint: [doc-path] [-- brief]\n---\nbody\n"
+        assert frontmatter_unquoted_flow_keys(text) == ["argument-hint"]
+
+    def test_ok_when_quoted(self):
+        text = '---\nargument-hint: "[doc-path] [-- brief]"\n---\n'
+        assert frontmatter_unquoted_flow_keys(text) == []
+
+    def test_ok_plain_scalar(self):
+        text = "---\ndescription: A plain description.\n---\n"
+        assert frontmatter_unquoted_flow_keys(text) == []
 
 
 class DescribeCheckIndexDeclares:

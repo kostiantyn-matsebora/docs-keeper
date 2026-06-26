@@ -130,6 +130,23 @@ def find_host_prompt(repo: str) -> str:
     return ""
 
 
+def frontmatter_unquoted_flow_keys(text: str) -> list[str]:
+    """
+    Return frontmatter keys whose value starts with a YAML flow indicator (`[`/`{`)
+    while unquoted — these break the parser (e.g. `argument-hint: [a] [b]`) and the
+    command then loads with EMPTY metadata (Finding F4). Such values must be quoted.
+    """
+    m = re.match(r"^---\n(.*?)\n---", text or "", re.S)
+    if not m:
+        return []
+    bad = []
+    for line in m.group(1).splitlines():
+        kv = re.match(r"^([A-Za-z0-9_-]+):\s*(\S.*?)\s*$", line)
+        if kv and kv.group(2)[:1] in "[{":
+            bad.append(kv.group(1))
+    return bad
+
+
 # ---------------------------------------------------------------------------
 # Phase checks (return list of (ok, message) tuples)
 # ---------------------------------------------------------------------------
@@ -173,9 +190,14 @@ def check_install(plugin_root: str) -> list[tuple]:
     results.append(
         (bool(read_text(os.path.join(plugin_root, "agents", "docs-keeper.md")).strip()), "agents/docs-keeper.md present")
     )
+    fm_issues = []
     for cmd in EXPECTED_COMMANDS:
         path = os.path.join(plugin_root, "commands", f"{cmd}.md")
         results.append((bool(read_text(path).strip()), f"commands/{cmd}.md present"))
+        fm_issues += [f"{cmd}.md:{k}" for k in frontmatter_unquoted_flow_keys(read_text(path))]
+    results.append(
+        (not fm_issues, f"command frontmatter has no unquoted [..]/{{..}} scalars{' — ' + str(fm_issues) if fm_issues else ''}")
+    )
 
     # Vendored engine + spec must have been assembled into the plugin root.
     results.append(

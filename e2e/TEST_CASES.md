@@ -206,6 +206,23 @@ of free-handing it (and setup creates a single index per scope root — no ad-ho
 before reporting success. Guarded by SETUP-10 (deterministic emitter); the full-stack
 reproducibility confirms on the next agentic run (SETUP-11).
 
+### F4 — `revise.md` command had invalid YAML frontmatter — **FIXED**
+
+`claude plugin validate --strict` (INST-09) flagged `commands/revise.md`:
+
+```
+frontmatter: YAML frontmatter failed to parse: Unexpected token.
+At runtime this command loads with empty metadata (all frontmatter fields silently dropped).
+```
+
+`argument-hint: [doc-path] [-- brief]` is invalid YAML — `[doc-path]` parses as a flow sequence,
+then ` [-- brief]` is unexpected. So the command's `description`/`argument-hint` were silently
+dropped whenever `/docs-keeper:revise` loaded.
+
+**Fix (landed).** Quote the value (`"[doc-path] [-- brief]"`); quoted the other commands' hints
+too for consistency. Guarded deterministically by `assert_e2e.frontmatter_unquoted_flow_keys`
+(in the `install` check) so a regression fails without needing the CLI, plus INST-09 itself.
+
 ---
 
 ## Harness notes (not docs-keeper bugs)

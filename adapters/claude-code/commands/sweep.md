@@ -1,6 +1,6 @@
 ---
 description: Cross-doc consistency sweep — verify every sources-of-truth entry, walk every index.md children list, flag orphans + broken links + legacy-navigation READMEs, hand off drift. Mode C of docs-keeper.
-argument-hint: [optional-scope-path]
+argument-hint: "[optional-scope-path]"
 ---
 
 # /docs-keeper:sweep
