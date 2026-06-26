@@ -37,6 +37,13 @@ stopping its descent only when it hits a sub-directory that already has its OWN
 
 Boundaries compose: a deeply-nested `index.md` is a boundary for every ancestor above it.
 
+## Indexed file set
+
+Which files are surfaced as children is governed by the config `paths` globs
+(`.docs-keeper/config.json`, default `["**/*.md"]` — see [`config.md`](config.md)). Below,
+"Markdown file" means "a file matching `paths`"; the default makes that every `.md`. Files
+not matching `paths` are ignored. The index filename itself is always `index.md`.
+
 ## Format conventions
 
 - **Index filename.** `index.md` (lowercase). Renders at the directory URL on GitHub
