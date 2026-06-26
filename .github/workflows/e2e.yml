@@ -142,8 +142,12 @@ jobs:
       CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
       ANTHROPIC_API_KEY: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN == '' && secrets.ANTHROPIC_API_KEY || '' }}
       # Broad enough that the agent never stalls on a permission prompt in -p mode.
+      # bypassPermissions so the simulated integrator's `git commit` is never denied
+      # by Claude's permission layer (the docs-keeper PreToolUse gate still fires and
+      # blocks on drift — that's a hook, independent of permission mode). Safe here:
+      # the clone's push remote is removed below, so the agent cannot push anywhere.
       DK_TOOLS: "Bash,Read,Edit,Write,Glob,Grep,Skill,TodoWrite"
-      DK_FLAGS: "--permission-mode acceptEdits --output-format json"
+      DK_FLAGS: "--permission-mode bypassPermissions --output-format json"
     steps:
       - name: Checkout docs-keeper
         uses: actions/checkout@v6
@@ -174,6 +178,9 @@ jobs:
             "$EX"
           git -C "$EX" config user.email e2e@docs-keeper.test
           git -C "$EX" config user.name "docs-keeper e2e"
+          # Drop the token-bearing push remote: the e2e only commits locally, and the
+          # agent must never be able to push to the example repo.
+          git -C "$EX" remote remove origin
 
       # --- Phase 1: install the plugin at PROJECT scope + assert it loaded -----
       - name: Install docs-keeper into the example repo at project scope
