@@ -23,10 +23,6 @@ on:
         default: false
   schedule:
     - cron: "0 6 * * 1" # weekly, Monday 06:00 UTC
-  # TEMPORARY: verify the new agentic phases before this lands on the default
-  # branch. Remove once green. (extended cases stay off — they need dispatch.)
-  push:
-    branches: [claude/docs-keeper-e2e-workflow-zmunho]
 
 permissions:
   contents: read
