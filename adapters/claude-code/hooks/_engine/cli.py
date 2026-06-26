@@ -18,12 +18,12 @@ import sys
 
 try:  # package context (python3 -m core.engine.cli, or the vendored _engine package)
     from .config import get_enforcement_setting, get_index_globs, load_config
-    from .drift import format_block_message, get_docs_drift_queue, resolve_enforcement_mode
+    from .drift import format_block_message, get_docs_drift_queue, get_expected_children, resolve_enforcement_mode
     from .gitio import make_dir_lister, make_file_reader, resolve_repo_root_from_git
 except ImportError:  # script context (python3 <…>/cli.py) — flat sibling import, location-independent
     sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
     from config import get_enforcement_setting, get_index_globs, load_config
-    from drift import format_block_message, get_docs_drift_queue, resolve_enforcement_mode
+    from drift import format_block_message, get_docs_drift_queue, get_expected_children, resolve_enforcement_mode
     from gitio import make_dir_lister, make_file_reader, resolve_repo_root_from_git
 
 
@@ -40,9 +40,30 @@ def run_drift_only(repo_root: str, enforcement_mode: str, index_globs=None) -> i
     return 0 if mode == "warn" else 2
 
 
+def run_emit_children(repo_root: str, target_dir: str, index_globs=None) -> int:
+    """
+    Print the authoritative `children:` entries for target_dir's index.md, one
+    per line — the SAME deterministic recursive descent the drift gate checks.
+
+    Lets the index/setup procedures build a `children:` set that matches the gate
+    by construction (no hand-enumeration), so the result is reproducible.
+    """
+    normalized = (target_dir or ".").rstrip("/") or "."
+    dir_lister = make_dir_lister(repo_root)
+    for entry in get_expected_children(normalized, dir_lister, index_globs=index_globs):
+        print(entry)
+    return 0
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description="docs-keeper neutral drift gate.")
     parser.add_argument("--drift-only", action="store_true", help="Index + registry drift check only.")
+    parser.add_argument(
+        "--emit-children",
+        metavar="DIR",
+        default="",
+        help="Print the deterministic children entries for DIR's index.md (one per line) and exit.",
+    )
     parser.add_argument("--repo-root", default="", help="Repo working tree (default: git root / cwd).")
     parser.add_argument(
         "--enforce",
@@ -56,6 +77,9 @@ def main() -> None:
     config = load_config(make_file_reader(repo_root))
     enforcement_mode = args.enforce or get_enforcement_setting(config)
     index_globs = get_index_globs(config)
+
+    if args.emit_children:
+        sys.exit(run_emit_children(repo_root, args.emit_children, index_globs))
 
     if args.drift_only:
         sys.exit(run_drift_only(repo_root, enforcement_mode, index_globs))

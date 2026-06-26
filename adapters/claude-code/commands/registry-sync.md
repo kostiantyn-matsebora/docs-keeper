@@ -1,6 +1,6 @@
 ---
 description: Sync the host's "Sources of truth" registry to the current set of per-directory index.md indexes. Mode D of docs-keeper.
-argument-hint: [--propose-only]
+argument-hint: "[--propose-only]"
 ---
 
 # /docs-keeper:registry-sync

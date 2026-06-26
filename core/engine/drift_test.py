@@ -454,8 +454,21 @@ class DescribeCheckRegistryHasEntry:
     def test_false_on_empty_content(self):
         assert check_registry_has_entry("", "docs") is False
 
+    def test_root_index_dir_matches_the_root_index_file_entry(self):
+        # A repo-root indexed tree (dir ".") is referenced by the root index
+        # file, not a "./" path (regression for F2 / EDGE-07).
+        content = "## Sources of truth\n\n- [`index.md`](index.md) — Acme Stack docs.\n"
+        assert check_registry_has_entry(content, ".") is True
+
+    def test_root_index_dir_false_when_unlisted(self):
+        assert check_registry_has_entry("## Sources of truth\n\n- [docs/](docs/) — x.\n", ".") is False
+
 
 class DescribeCheckRegistryRoleInSync:
+    def test_root_index_dir_in_sync_when_line_contains_intro(self):
+        c = "## Sources of truth\n\n- [`index.md`](index.md) — Acme Stack docs.\n"
+        assert check_registry_role_in_sync(c, ".", "Acme Stack docs") is True
+
     def test_true_when_the_entry_line_contains_the_intro(self):
         c = "## Sources of truth\n\n- [docs/](docs/) — Fresh role text.\n"
         assert check_registry_role_in_sync(c, "docs", "Fresh role text") is True

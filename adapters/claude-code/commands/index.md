@@ -1,6 +1,6 @@
 ---
 description: Build or refresh a directory's index.md (github/docs-style recursive-descent children list with sub-index boundaries, hierarchical, minimum-footprint), then walk UP the tree. Mode A of docs-keeper.
-argument-hint: <directory-path>
+argument-hint: "<directory-path>"
 ---
 
 # /docs-keeper:index

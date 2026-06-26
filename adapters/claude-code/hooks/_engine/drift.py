@@ -309,15 +309,28 @@ def get_root_index_dirs(index_dirs: list[str]) -> list[str]:
     return roots
 
 
+def registry_needle(dir_path: str) -> str:
+    """
+    The substring that identifies an index dir's entry in the registry section.
+
+    Sub-dir indexes are referenced by their directory path (`docs/`); the
+    repo-root index (dir `.` / '') has no `./`-style path in a natural bullet —
+    its registry entry links the root index file, so match `index.md`.
+    """
+    if dir_path in ("", "."):
+        return "index.md"
+    return dir_path if dir_path.endswith("/") else f"{dir_path}/"
+
+
 def check_registry_has_entry(content: str, dir_path: str) -> bool:
     """
-    Return True when dir_path/ appears in the "Sources of truth" section.
+    Return True when dir_path's entry appears in the "Sources of truth" section.
 
     Named check_ (not test_) so pytest does not collect it as a fixture.
     """
     if not content or not content.strip():
         return False
-    needle = dir_path if dir_path.endswith("/") else f"{dir_path}/"
+    needle = registry_needle(dir_path)
     in_section = False
     for line in re.split(r"\r?\n", content):
         if re.match(r"^#{1,6}\s", line):
@@ -339,7 +352,7 @@ def check_registry_role_in_sync(content: str, dir_path: str, intro: str) -> bool
         return True
     if not content or not content.strip():
         return False
-    needle = dir_path if dir_path.endswith("/") else f"{dir_path}/"
+    needle = registry_needle(dir_path)
     in_section = False
     for line in re.split(r"\r?\n", content):
         if re.match(r"^#{1,6}\s", line):
