@@ -55,7 +55,7 @@ transcript scraping.
 | INST-04 | D | ✅ | Vendored `_engine` + `spec` trees present in plugin root |
 | INST-05 | A | 🟡 | `claude plugin install` succeeds and the plugin is listed |
 | INST-06 | D | ✅ | `hooks.json` wraps events under a top-level `"hooks"` key (load-format guard, F1) |
-| INST-07 | A | 🟡 | **Installed plugin's hooks LOAD** (`Status: loaded`) — F1 fixed; pending agentic re-run |
+| INST-07 | A | ✅ | **Installed plugin's hooks LOAD** (`Status: loaded`) — F1 fixed; CONFIRMED loaded |
 | INST-08 | A | ⬜ | SessionStart hook fires (snapshot written under `.docs-keeper/` runtime state) |
 | INST-09 | D | ⬜ | `claude plugin validate --strict adapters/claude-code` passes |
 
@@ -71,42 +71,41 @@ transcript scraping.
 | SETUP-01 | A | ✅ | `config.json` created + valid (`enforcement`, `paths`) |
 | SETUP-02 | A | ✅ | Per-directory `index.md` files built across the docs |
 | SETUP-03 | A | ✅ | Host prompt gains a "Sources of truth" section |
-| SETUP-04 | A | 🟡 | **Post-setup drift gate is CLEAN (exit 0)** — F2 fixed; pending agentic re-run |
+| SETUP-04 | A | ✅ | **Post-setup drift gate is CLEAN (exit 0)** — F2 fixed; CONFIRMED green |
 | SETUP-05 | A | ⬜ | Idempotent — a second `setup` on a green repo writes no changes (`git diff` empty) |
 | SETUP-06 | A | ⬜ | No host prompt present → `setup` creates a minimal `CLAUDE.md` skeleton |
 | SETUP-07 | A | ⬜ | `setup docs/` scopes indexing to one root; siblings untouched |
 | SETUP-08 | A | ⬜ | Existing hand-authored `index.md` is not clobbered (proposed diff, not overwrite) |
 | SETUP-09 | A | ⬜ | Pre-existing `config.json` is read, not overwritten |
 | SETUP-10 | D | ✅ | `cli.py --emit-children <dir>` is deterministic + matches the gate's expected set (F3) |
-| SETUP-11 | A | 🟡 | Setup reaches green deterministically across repeated runs (F3 fix) — pending agentic re-run |
+| SETUP-11 | A | ✅ | Setup reaches green deterministically across repeated runs (F3 fix) — CONFIRMED across 3 runs |
 
 - **SETUP-04.** *Pre:* `setup` ran. *Do:* `cli.py --drift-only --enforce block`. *Expect:* exit 0.
   F2 (repo-root index never satisfied the registry check) is fixed in the engine; the assertion is
-  unchanged and now passes deterministically (EDGE-07) — pending the agentic re-run for the
-  full-stack confirmation.
+  unchanged and now passes deterministically (EDGE-07); CONFIRMED green in the agentic run.
 
 ## 3. Code change → auto-synchronized by the commit gate
 
 | ID | Tier | Status | Title |
 |---|---|---|---|
 | CODE-01 | D | ✅ | PreToolUse gate blocks a drifting `git commit` (exit 2; queue names the commands) |
-| CODE-02 | A | 🟡 | Strict mode: code+doc change → integrator commits → gate auto-syncs → tree clean |
-| CODE-03 | A | 🟡 | New doc declared in its `index.md` after the auto-sync (incremental walk-up) |
+| CODE-02 | A | ✅ | Strict mode: code+doc change → integrator commits → gate auto-syncs → tree clean |
+| CODE-03 | A | ✅ | New doc declared in its `index.md` after the auto-sync (incremental walk-up) |
 | CODE-04 | A | ⬜ | `warn` mode: commit is NOT blocked; advisory `systemMessage` emitted; commit lands as-is |
 | CODE-05 | A | ⬜ | Code-only change (no Markdown staged) → gate is silent (exit 0, `no-docs-change`) |
 | CODE-06 | A | ⬜ | Edited (not new) doc, unrevised this session → gate queues `revise`, not `index` |
 | CODE-07 | A | ⬜ | Agent must NOT bypass the gate (`--no-verify` is disallowed and not used) |
 
 - **CODE-02/03 depend on INST-07** (hooks loading). With F1 fixed the in-session commit is gated,
-  so the agent must sync before the commit lands — pending the agentic re-run to confirm green.
+  so the agent must sync before the commit lands. CONFIRMED green in the agentic run.
 
 ## 4. Documentation change → auto-synchronized by the commit gate
 
 | ID | Tier | Status | Title |
 |---|---|---|---|
 | DOC-01 | D | ✅ | Neutral CLI gate: clean tree exits 0, drifting tree exits 2 |
-| DOC-02 | A | 🟡 | Strict mode: new doc → integrator commits → gate auto-syncs index/registry → tree clean |
-| DOC-03 | A | 🟡 | Resolved index declares the new doc as a child (incremental, no full rebuild) |
+| DOC-02 | A | ✅ | Strict mode: new doc → integrator commits → gate auto-syncs index/registry → tree clean |
+| DOC-03 | A | ✅ | Resolved index declares the new doc as a child (incremental, no full rebuild) |
 | DOC-04 | A | ⬜ | Deleted doc → walk-up removes its `children:` entry on the next commit; gate clean |
 | DOC-05 | A | ⬜ | Renamed doc → old slug dropped, new slug added in one incremental pass |
 | DOC-06 | A | ⬜ | New sub-dir with its own `index.md` folds into the parent as one boundary entry |
@@ -154,7 +153,7 @@ transcript scraping.
 
 Real product issues the agentic e2e caught. Both are fixed in the engine/adapter and guarded by
 new deterministic regression tests; the agentic cases that depended on them (INST-07, SETUP-04,
-CODE-02/03, DOC-02/03) move 🐞→🟡 and confirm green on the next agentic run. Assertions were never
+CODE-02/03, DOC-02/03) are CONFIRMED green in a full agentic run. Assertions were never
 weakened to go green.
 
 ### F1 — installed plugin hooks failed to load (blocked all hook-driven auto-sync) — **FIXED**
