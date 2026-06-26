@@ -56,8 +56,8 @@ transcript scraping.
 | INST-05 | A | 🟡 | `claude plugin install` succeeds and the plugin is listed |
 | INST-06 | D | ✅ | `hooks.json` wraps events under a top-level `"hooks"` key (load-format guard, F1) |
 | INST-07 | A | ✅ | **Installed plugin's hooks LOAD** (`Status: loaded`) — F1 fixed; CONFIRMED loaded |
-| INST-08 | A | ⬜ | SessionStart hook fires (snapshot written under `.docs-keeper/` runtime state) |
-| INST-09 | D | ⬜ | `claude plugin validate --strict adapters/claude-code` passes |
+| INST-08 | A | 🟡 | SessionStart hook fires (snapshot written under `.docs-keeper/` runtime state) |
+| INST-09 | A | 🟡 | `claude plugin validate --strict adapters/claude-code` passes |
 
 - **INST-06.** *Do:* `assert_e2e.py install`. *Expect:* the wrapper check passes. This is the
   deterministic regression guard for F1 — a bare event map (no top-level `"hooks"`) fails to load.
@@ -72,11 +72,11 @@ transcript scraping.
 | SETUP-02 | A | ✅ | Per-directory `index.md` files built across the docs |
 | SETUP-03 | A | ✅ | Host prompt gains a "Sources of truth" section |
 | SETUP-04 | A | ✅ | **Post-setup drift gate is CLEAN (exit 0)** — F2 fixed; CONFIRMED green |
-| SETUP-05 | A | ⬜ | Idempotent — a second `setup` on a green repo writes no changes (`git diff` empty) |
-| SETUP-06 | A | ⬜ | No host prompt present → `setup` creates a minimal `CLAUDE.md` skeleton |
-| SETUP-07 | A | ⬜ | `setup docs/` scopes indexing to one root; siblings untouched |
-| SETUP-08 | A | ⬜ | Existing hand-authored `index.md` is not clobbered (proposed diff, not overwrite) |
-| SETUP-09 | A | ⬜ | Pre-existing `config.json` is read, not overwritten |
+| SETUP-05 | A | 🟡 | Idempotent — a second `setup` on a green repo writes no changes (`git diff` empty) |
+| SETUP-06 | A | 🟡 | No host prompt present → `setup` creates a minimal `CLAUDE.md` skeleton |
+| SETUP-07 | A | 🟡 | `setup docs/` scopes indexing to one root; siblings untouched |
+| SETUP-08 | A | 🟡 | Existing hand-authored `index.md` is not clobbered (proposed diff, not overwrite) |
+| SETUP-09 | A | 🟡 | Pre-existing `config.json` is read, not overwritten |
 | SETUP-10 | D | ✅ | `cli.py --emit-children <dir>` is deterministic + matches the gate's expected set (F3) |
 | SETUP-11 | A | ✅ | Setup reaches green deterministically across repeated runs (F3 fix) — CONFIRMED across 3 runs |
 
@@ -91,9 +91,9 @@ transcript scraping.
 | CODE-01 | D | ✅ | PreToolUse gate blocks a drifting `git commit` (exit 2; queue names the commands) |
 | CODE-02 | A | ✅ | Strict mode: code+doc change → integrator commits → gate auto-syncs → tree clean |
 | CODE-03 | A | ✅ | New doc declared in its `index.md` after the auto-sync (incremental walk-up) |
-| CODE-04 | A | ⬜ | `warn` mode: commit is NOT blocked; advisory `systemMessage` emitted; commit lands as-is |
-| CODE-05 | A | ⬜ | Code-only change (no Markdown staged) → gate is silent (exit 0, `no-docs-change`) |
-| CODE-06 | A | ⬜ | Edited (not new) doc, unrevised this session → gate queues `revise`, not `index` |
+| CODE-04 | D | ✅ | `warn` mode: commit is NOT blocked; advisory `systemMessage` emitted; commit lands as-is |
+| CODE-05 | D | ✅ | Code-only change (no Markdown staged) → gate is silent (exit 0, `no-docs-change`) |
+| CODE-06 | D | ✅ | Edited (not new) doc, unrevised this session → gate queues `revise`, not `index` |
 | CODE-07 | A | ⬜ | Agent must NOT bypass the gate (`--no-verify` is disallowed and not used) |
 
 - **CODE-02/03 depend on INST-07** (hooks loading). With F1 fixed the in-session commit is gated,
@@ -106,46 +106,46 @@ transcript scraping.
 | DOC-01 | D | ✅ | Neutral CLI gate: clean tree exits 0, drifting tree exits 2 |
 | DOC-02 | A | ✅ | Strict mode: new doc → integrator commits → gate auto-syncs index/registry → tree clean |
 | DOC-03 | A | ✅ | Resolved index declares the new doc as a child (incremental, no full rebuild) |
-| DOC-04 | A | ⬜ | Deleted doc → walk-up removes its `children:` entry on the next commit; gate clean |
-| DOC-05 | A | ⬜ | Renamed doc → old slug dropped, new slug added in one incremental pass |
-| DOC-06 | A | ⬜ | New sub-dir with its own `index.md` folds into the parent as one boundary entry |
-| DOC-07 | A | ⬜ | `index.md` `title`/`intro` change → gate queues `registry-sync`; registry line refreshed |
-| DOC-08 | A | ⬜ | Config `paths` narrowed → files outside the globs are not indexed and don't drift |
+| DOC-04 | D | ✅ | Deleted doc → walk-up removes its `children:` entry on the next commit; gate clean |
+| DOC-05 | D | ✅ | Renamed doc → old slug dropped, new slug added in one incremental pass |
+| DOC-06 | D | ✅ | New sub-dir with its own `index.md` folds into the parent as one boundary entry |
+| DOC-07 | D | ✅ | `index.md` `title`/`intro` change → gate queues `registry-sync`; registry line refreshed |
+| DOC-08 | D | ✅ | Config `paths` narrowed → files outside the globs are not indexed and don't drift |
 
 ## 5. Other commands (coverage backlog)
 
 | ID | Tier | Status | Title |
 |---|---|---|---|
-| REV-01 | A | ⬜ | `/docs-keeper:revise <doc>` tightens prose without inventing decisions |
-| REG-01 | A | ⬜ | `/docs-keeper:registry-sync` reconciles a stale registry line |
-| REG-02 | A | ⬜ | `registry-sync` on a repo with no section halts and asks (no cold-create) |
-| SWEEP-01 | A | ⬜ | `/docs-keeper:sweep` reports orphans + broken links |
+| REV-01 | A | 🟡 | `/docs-keeper:revise <doc>` tightens prose without inventing decisions |
+| REG-01 | A | 🟡 | `/docs-keeper:registry-sync` reconciles a stale registry line |
+| REG-02 | A | 🟡 | `registry-sync` on a repo with no section halts and asks (no cold-create) |
+| SWEEP-01 | A | 🟡 | `/docs-keeper:sweep` reports orphans + broken links |
 | SWEEP-02 | A | ⬜ | `sweep` flags a legacy-navigation README as a deprecation candidate |
-| CFG-01 | A | ⬜ | `/docs-keeper:config enforcement block` persists + validates |
-| CFG-02 | A | ⬜ | `config paths docs/**/*.md` replaces the watch globs |
-| CFG-03 | D | ⬜ | `config` rejects an invalid enforcement value with a clear error |
-| CAP-01 | A | ⬜ | PostCompact capture records a doc-worthy decision from a summary |
+| CFG-01 | D | ✅ | `/docs-keeper:config enforcement block` persists + validates |
+| CFG-02 | D | ✅ | `config paths docs/**/*.md` replaces the watch globs |
+| CFG-03 | D | ✅ | `config` rejects an invalid enforcement value with a clear error |
+| CAP-01 | D | ✅ | PostCompact capture records a doc-worthy decision from a summary |
 
 ## 6. Session + lifecycle hooks (all depend on INST-06)
 
 | ID | Tier | Status | Title |
 |---|---|---|---|
-| SESS-01 | A | ⬜ | Stop hook tracks edited docs into session state |
-| SESS-02 | A | ⬜ | PostToolUse(Skill) marks a revised doc so the commit gate stops re-suggesting `revise` |
-| SESS-03 | A | ⬜ | SessionEnd GCs stale per-session tracker files |
+| SESS-01 | D | ✅ | Stop hook tracks edited docs into session state |
+| SESS-02 | D | ✅ | PostToolUse(Skill) marks a revised doc so the commit gate stops re-suggesting `revise` |
+| SESS-03 | D | ✅ | SessionEnd GCs stale per-session tracker files |
 
 ## 7. Edge cases + robustness
 
 | ID | Tier | Status | Title |
 |---|---|---|---|
-| EDGE-01 | D | ⬜ | Empty repo (no docs) → setup + gate are no-ops, exit 0 |
-| EDGE-02 | D | ⬜ | `AGENTS.md` host (no `CLAUDE.md`) → registry section detected there |
-| EDGE-03 | D | ⬜ | Excluded dirs (`node_modules`, `build`) never indexed |
-| EDGE-04 | D | ⬜ | `git commit-tree` / `commit-graph` do NOT trigger the gate (word-boundary) |
-| EDGE-05 | D | ⬜ | Non-`.md` files under a matching glob ignored as children |
+| EDGE-01 | D | ✅ | Empty repo (no docs) → setup + gate are no-ops, exit 0 |
+| EDGE-02 | D | ✅ | `AGENTS.md` host (no `CLAUDE.md`) → registry section detected there |
+| EDGE-03 | D | ✅ | Excluded dirs (`node_modules`, `build`) never indexed |
+| EDGE-04 | D | ✅ | `git commit-tree` / `commit-graph` do NOT trigger the gate (word-boundary) |
+| EDGE-05 | D | ✅ | Non-`.md` files under a matching glob ignored as children |
 | EDGE-06 | A | ⬜ | Large tree → growth-by-splitting introduces a sub-index; parent shrinks |
 | EDGE-07 | D | ✅ | Repo-root indexed tree (`./index.md`) registry membership resolves (regression for F2) |
-| EDGE-08 | D | ⬜ | Windows/CRLF index.md parsed identically to LF |
+| EDGE-08 | D | ✅ | Windows/CRLF index.md parsed identically to LF |
 
 ---
 
@@ -217,6 +217,18 @@ reproducibility confirms on the next agentic run (SETUP-11).
   the change-phases hard-assert docs-keeper's deterministic guarantee (gate detects drift → agent
   syncs → tree clean + new doc declared) and only **log** whether a new commit landed. The
   commit-gate *block* itself is covered deterministically by CODE-01 (PreToolUse by path).
+
+## Deliberately not automated (3)
+
+These stay `⬜` on purpose — each asserts agent *judgment* or a *negative*, which can't be pinned
+to a deterministic observable without becoming flaky:
+
+- **CODE-07** — "agent must NOT bypass the gate (`--no-verify`)": asserting the absence of a
+  behavior. The prompts instruct against it; the gate block itself is covered by CODE-01.
+- **SWEEP-02** — "sweep flags a legacy-navigation README": depends on the agent's classification
+  prose; the engine's README-classification rules are unit-tested in `drift_test.py`.
+- **EDGE-06** — "large tree → growth-by-splitting": the *boundary* mechanics are covered by DOC-06
+  and SETUP-10; *when* to split is an agent decision, not a fixed assertion.
 
 ## How to add a case
 

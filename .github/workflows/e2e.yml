@@ -16,8 +16,17 @@ name: e2e
 
 on:
   workflow_dispatch:
+    inputs:
+      extended:
+        description: "Also run the extended agentic coverage (fixture-based setup/registry cases — more agent sessions, more cost)."
+        type: boolean
+        default: false
   schedule:
     - cron: "0 6 * * 1" # weekly, Monday 06:00 UTC
+  # TEMPORARY: verify the new agentic phases before this lands on the default
+  # branch. Remove once green. (extended cases stay off — they need dispatch.)
+  push:
+    branches: [claude/docs-keeper-e2e-workflow-zmunho]
 
 permissions:
   contents: read
@@ -202,6 +211,9 @@ jobs:
       - name: Assert plugin assets are all in place
         run: python3 "$DK/e2e/assert_e2e.py" install --plugin-root "$DK/adapters/claude-code"
 
+      - name: INST-09 — claude plugin validate --strict
+        run: claude plugin validate --strict "$DK/adapters/claude-code"
+
       # --- Phase 2: run setup and assert a green baseline ----------------------
       - name: Run /docs-keeper:setup
         working-directory: ${{ env.EX }}
@@ -223,6 +235,26 @@ jobs:
           python3 "$DK/e2e/assert_e2e.py" setup --repo "$EX"
           # Setup's contract is a green baseline: the drift gate must be clean.
           python3 "$DK/core/engine/cli.py" --drift-only --repo-root "$EX" --enforce block
+
+      - name: INST-08 — SessionStart hook wrote a session snapshot
+        run: |
+          set -euo pipefail
+          ls -la "$EX/.docs-keeper" || true
+          ls "$EX"/.docs-keeper/session.*.json >/dev/null 2>&1 \
+            || { echo "::error::no SessionStart snapshot under .docs-keeper/"; exit 1; }
+
+      - name: SETUP-05 — setup is idempotent (re-run writes no changes)
+        working-directory: ${{ env.EX }}
+        run: |
+          set -uo pipefail
+          git add -A && git commit -qm "setup baseline" || true
+          claude -p "/docs-keeper:setup" --allowedTools "$DK_TOOLS" $DK_FLAGS \
+            > "$RUNNER_TEMP/setup-rerun.json" 2>&1 || true
+          python3 "$DK/e2e/check_session.py" "$RUNNER_TEMP/setup-rerun.json"
+          set -e
+          # A second setup on a green repo must make no source changes.
+          test -z "$(git status --porcelain)" || { echo "::error::setup not idempotent:"; git status --porcelain; exit 1; }
+          echo "setup idempotent: working tree clean after re-run"
 
       - name: Resolve an indexed directory to mutate
         run: |
@@ -302,15 +334,106 @@ jobs:
           echo "commits: base=$BASE_COMMITS_DOC now=$now (commit best-effort, not asserted)"
           git -C "$EX" log --oneline -n 3 || true
 
+      # --- Phase 5: command coverage on the example repo (reuses the clone) ----
+      - name: REG-01 — registry-sync reconciles a stale registry line
+        working-directory: ${{ env.EX }}
+        run: |
+          set -uo pipefail
+          idx="${INDEX_DIR%/}/index.md"; idx="${idx#./}"; [ "$idx" = "/index.md" ] && idx="index.md"
+          python3 - "$idx" <<'PY'
+          import re, sys
+          p = sys.argv[1]; s = open(p, encoding="utf-8").read()
+          s = re.sub(r"(?m)^intro:.*$", "intro: 'Registry reconcile probe intro.'", s, count=1)
+          open(p, "w", encoding="utf-8").write(s)
+          PY
+          set +e; python3 "$DK/core/engine/cli.py" --drift-only --repo-root "$EX" --enforce block; gate=$?; set -e
+          test "$gate" -eq 2   # registry line now stale vs the index intro
+          claude -p "/docs-keeper:registry-sync" --allowedTools "$DK_TOOLS" $DK_FLAGS \
+            > "$RUNNER_TEMP/registry-sync.json" 2>&1 || true
+          python3 "$DK/e2e/check_session.py" "$RUNNER_TEMP/registry-sync.json"
+          set -e
+          python3 "$DK/core/engine/cli.py" --drift-only --repo-root "$EX" --enforce block
+          echo "REG-01: registry reconciled, drift clean"
+
+      - name: REV-01 — revise tightens a doc without introducing drift
+        working-directory: ${{ env.EX }}
+        run: |
+          set -uo pipefail
+          claude -p "/docs-keeper:revise ${INDEX_DIR%/}/refunds.md" --allowedTools "$DK_TOOLS" $DK_FLAGS \
+            > "$RUNNER_TEMP/revise.json" 2>&1 || true
+          python3 "$DK/e2e/check_session.py" "$RUNNER_TEMP/revise.json"
+          set -e
+          test -f "${INDEX_DIR%/}/refunds.md"   # doc still present
+          python3 "$DK/core/engine/cli.py" --drift-only --repo-root "$EX" --enforce block
+
+      - name: SWEEP-01 — sweep runs and produces a report
+        working-directory: ${{ env.EX }}
+        run: |
+          set -uo pipefail
+          claude -p "/docs-keeper:sweep" --allowedTools "$DK_TOOLS" $DK_FLAGS \
+            > "$RUNNER_TEMP/sweep.json" 2>&1 || true
+          cat "$RUNNER_TEMP/sweep.json"
+          python3 "$DK/e2e/check_session.py" "$RUNNER_TEMP/sweep.json"
+          test -s "$RUNNER_TEMP/sweep.json"   # produced output
+
+      # --- Phase 6 (extended): fixture-based setup/registry cases --------------
+      # Gated behind the workflow_dispatch `extended` input — each spins a fresh
+      # repo + agent session, so it is opt-in to keep the weekly run lean.
+      - name: SETUP-06/08/09 — skeleton + non-clobber + config preserved (extended)
+        if: ${{ github.event_name == 'workflow_dispatch' && inputs.extended }}
+        run: |
+          set -uo pipefail
+          F="$RUNNER_TEMP/fx1"; mkdir -p "$F/docs"
+          git -C "$F" init -q; git -C "$F" config user.email e2e@dk.test; git -C "$F" config user.name dk
+          mkdir -p "$F/.docs-keeper"
+          printf '{\n  "enforcement": "warn",\n  "paths": ["docs/**/*.md"]\n}\n' > "$F/.docs-keeper/config.json"
+          printf -- '---\ntitle: Docs\nintro: '"'"'Hand authored.'"'"'\n---\n\n<!-- HANDAUTHORED-MARKER -->\n' > "$F/docs/index.md"
+          printf '# Guide\n' > "$F/docs/guide.md"   # NO CLAUDE.md — setup must create it
+          ( cd "$F" && claude plugin install docs-keeper@docs-keeper --scope project >/dev/null 2>&1 || true )
+          ( cd "$F" && claude -p "/docs-keeper:setup" --allowedTools "$DK_TOOLS" $DK_FLAGS > "$RUNNER_TEMP/fx1.json" 2>&1 || true )
+          python3 "$DK/e2e/check_session.py" "$RUNNER_TEMP/fx1.json"
+          set -e
+          test -f "$F/CLAUDE.md"                                  # SETUP-06: skeleton created
+          grep -qi "sources of truth" "$F/CLAUDE.md"             # SETUP-06: section seeded
+          grep -q "HANDAUTHORED-MARKER" "$F/docs/index.md"       # SETUP-08: hand-authored index not clobbered
+          grep -qF 'docs/**/*.md' "$F/.docs-keeper/config.json"  # SETUP-09: existing config preserved
+
+      - name: SETUP-07 — scoped setup touches only the named root (extended)
+        if: ${{ github.event_name == 'workflow_dispatch' && inputs.extended }}
+        run: |
+          set -uo pipefail
+          F="$RUNNER_TEMP/fx2"; mkdir -p "$F/docs" "$F/other"
+          git -C "$F" init -q; git -C "$F" config user.email e2e@dk.test; git -C "$F" config user.name dk
+          printf '# D\n' > "$F/docs/d.md"; printf '# O\n' > "$F/other/o.md"; printf '# Host\n' > "$F/CLAUDE.md"
+          ( cd "$F" && claude plugin install docs-keeper@docs-keeper --scope project >/dev/null 2>&1 || true )
+          ( cd "$F" && claude -p "/docs-keeper:setup docs/" --allowedTools "$DK_TOOLS" $DK_FLAGS > "$RUNNER_TEMP/fx2.json" 2>&1 || true )
+          python3 "$DK/e2e/check_session.py" "$RUNNER_TEMP/fx2.json"
+          set -e
+          test -f "$F/docs/index.md"        # docs/ indexed
+          test ! -f "$F/other/index.md"     # other/ left untouched
+
+      - name: REG-02 — registry-sync refuses to cold-create the section (extended)
+        if: ${{ github.event_name == 'workflow_dispatch' && inputs.extended }}
+        run: |
+          set -uo pipefail
+          F="$RUNNER_TEMP/fx3"; mkdir -p "$F/docs"
+          git -C "$F" init -q; git -C "$F" config user.email e2e@dk.test; git -C "$F" config user.name dk
+          printf -- '---\ntitle: Docs\nintro: '"'"'D.'"'"'\nchildren:\n  - /d\n---\n' > "$F/docs/index.md"
+          printf '# D\n' > "$F/docs/d.md"
+          printf '# Host\n\n(intentionally no Sources of truth section)\n' > "$F/CLAUDE.md"
+          ( cd "$F" && claude plugin install docs-keeper@docs-keeper --scope project >/dev/null 2>&1 || true )
+          ( cd "$F" && claude -p "/docs-keeper:registry-sync" --allowedTools "$DK_TOOLS" $DK_FLAGS > "$RUNNER_TEMP/fx3.json" 2>&1 || true )
+          python3 "$DK/e2e/check_session.py" "$RUNNER_TEMP/fx3.json"
+          set -e
+          ! grep -qi "sources of truth" "$F/CLAUDE.md"   # halted — did NOT cold-create
+
       - name: Upload session transcripts and resulting docs
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: e2e-artifacts
           path: |
-            ${{ runner.temp }}/setup.json
-            ${{ runner.temp }}/code-change.json
-            ${{ runner.temp }}/doc-change.json
+            ${{ runner.temp }}/*.json
             ${{ env.EX }}/**/index.md
             ${{ env.EX }}/CLAUDE.md
             ${{ env.EX }}/.docs-keeper/config.json
