@@ -114,7 +114,9 @@ jobs:
     steps:
       - id: check
         env:
-          HAS_KEY: ${{ secrets.ANTHROPIC_API_KEY != '' }}
+          # Either an Anthropic Console API key OR a Claude subscription token
+          # (claude setup-token) satisfies the agent auth requirement.
+          HAS_KEY: ${{ (secrets.ANTHROPIC_API_KEY != '' || secrets.CLAUDE_CODE_OAUTH_TOKEN != '') }}
           HAS_TOKEN: ${{ secrets.EXAMPLE_REPO_TOKEN != '' }}
         run: |
           if [ "$HAS_KEY" = "true" ] && [ "$HAS_TOKEN" = "true" ]; then
@@ -136,7 +138,9 @@ jobs:
     env:
       DK: ${{ github.workspace }}/docs-keeper
       EX: ${{ github.workspace }}/example
+      # Pass through whichever auth the user configured (empty one is ignored).
       ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+      CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
       # Broad enough that the agent never stalls on a permission prompt in -p mode.
       DK_TOOLS: "Bash,Read,Edit,Write,Glob,Grep,Skill,TodoWrite"
       DK_FLAGS: "--permission-mode acceptEdits --output-format json"
@@ -201,6 +205,7 @@ jobs:
           claude -p "/docs-keeper:setup" --allowedTools "$DK_TOOLS" $DK_FLAGS \
             > "$RUNNER_TEMP/setup.json" 2>&1 || true
           cat "$RUNNER_TEMP/setup.json"
+          python3 "$DK/e2e/check_session.py" "$RUNNER_TEMP/setup.json"
 
       - name: Assert setup reached a green baseline
         run: |
@@ -233,6 +238,7 @@ jobs:
           claude -p "I changed the code file '$src' and added the doc '${INDEX_DIR}/payments-processor.md'. Keep the documentation synchronized: refresh the index.md indexes and the host 'Sources of truth' registry so there is no drift, then commit the result with git." \
             --allowedTools "$DK_TOOLS" $DK_FLAGS > "$RUNNER_TEMP/code-change.json" 2>&1 || true
           cat "$RUNNER_TEMP/code-change.json"
+          python3 "$DK/e2e/check_session.py" "$RUNNER_TEMP/code-change.json"
 
       - name: Assert docs are synchronized after the code change
         run: |
@@ -262,6 +268,7 @@ jobs:
           claude -p "/docs-keeper:index ${INDEX_DIR}/" --allowedTools "$DK_TOOLS" $DK_FLAGS \
             > "$RUNNER_TEMP/doc-change.json" 2>&1 || true
           cat "$RUNNER_TEMP/doc-change.json"
+          python3 "$DK/e2e/check_session.py" "$RUNNER_TEMP/doc-change.json"
 
       - name: Assert documentation is synchronized after the doc change
         run: |

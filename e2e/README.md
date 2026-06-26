@@ -19,7 +19,7 @@ a warning**, so the deterministic tier still runs on every trigger.
 
 | Secret | Purpose |
 |---|---|
-| `ANTHROPIC_API_KEY` | Authenticates the headless `claude` CLI that runs the agent. |
+| `ANTHROPIC_API_KEY` **or** `CLAUDE_CODE_OAUTH_TOKEN` | Authenticates the headless `claude` CLI. Use an Anthropic Console API key (`sk-ant-…`) **or** a Claude subscription token from `claude setup-token` — the workflow accepts either. |
 | `EXAMPLE_REPO_TOKEN` | PAT that can clone the **private** `kostiantyn-matsebora/docs-keeper-example` host repo (the default `GITHUB_TOKEN` is scoped to this repo only). |
 
 ## Triggers
