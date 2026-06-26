@@ -12,15 +12,21 @@ These realize the deterministic (`D`) rows of TEST_CASES.md so they run in CI
 without spending tokens. Agentic (`A`) rows live in .github/workflows/e2e.yml.
 """
 
+import json
 import subprocess
 import sys
 from pathlib import Path
+
+from core.engine import capture as cap_engine
+from core.engine import session as sess_engine
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 CLI = REPO_ROOT / "core" / "engine" / "cli.py"
 HOOKS_DIR = REPO_ROOT / "adapters" / "claude-code" / "hooks"
 CC_MAINTENANCE = HOOKS_DIR / "cc_maintenance.py"
 CC_CONFIG = HOOKS_DIR / "cc_config.py"
+CC_SESSION = HOOKS_DIR / "cc_session.py"
+CC_CAPTURE = HOOKS_DIR / "cc_capture.py"
 
 
 # ---------------------------------------------------------------------------
@@ -50,8 +56,6 @@ def set_config(root, enforcement=None, paths=None):
         obj["enforcement"] = enforcement
     if paths is not None:
         obj["paths"] = paths
-    import json
-
     write(root, ".docs-keeper/config.json", json.dumps(obj))
 
 
@@ -76,8 +80,6 @@ def emit_children(root, target="."):
 
 def run_commit_gate(root, command="git commit -m wip"):
     """Invoke the PreToolUse commit gate by path; return (exit_code, stdout, stderr)."""
-    import json
-
     payload = json.dumps({"tool_input": {"command": command}, "session_id": "bb"})
     r = subprocess.run(
         [sys.executable, str(CC_MAINTENANCE)],
@@ -98,6 +100,21 @@ def run_config_set(root, *args):
         cwd=str(HOOKS_DIR),
     )
     return r.returncode, r.stdout, r.stderr
+
+
+def run_hook(root, script, mode, payload=None, session_id=""):
+    """Drive a cc_session / cc_capture entrypoint by path; return CompletedProcess."""
+    argv = [sys.executable, str(script), mode]
+    if session_id:
+        argv += ["--session-id", session_id]
+    return subprocess.run(
+        argv,
+        input=(json.dumps(payload) if payload is not None else ""),
+        capture_output=True,
+        text=True,
+        cwd=str(HOOKS_DIR),
+        env={"CLAUDE_PROJECT_DIR": str(root), "PATH": _path()},
+    )
 
 
 def _path():
@@ -266,3 +283,56 @@ class DescribeConfigCommand:
         code, out, _ = run_config_set(tmp_path, "enforcement", "block")
         assert code == 0
         assert (tmp_path / ".docs-keeper" / "config.json").exists()
+
+    def test_cfg01_enforcement_persists(self, tmp_path):
+        run_config_set(tmp_path, "enforcement", "block")
+        cfg = json.loads((tmp_path / ".docs-keeper" / "config.json").read_text(encoding="utf-8"))
+        assert cfg["enforcement"] == "block"
+
+    def test_cfg02_paths_replaced(self, tmp_path):
+        code, _, _ = run_config_set(tmp_path, "paths", "docs/**/*.md", "adr/**/*.md")
+        assert code == 0
+        cfg = json.loads((tmp_path / ".docs-keeper" / "config.json").read_text(encoding="utf-8"))
+        assert cfg["paths"] == ["docs/**/*.md", "adr/**/*.md"]
+
+
+# ---------------------------------------------------------------------------
+# SESS / CAP — session-tracker + capture hooks (by path)
+# ---------------------------------------------------------------------------
+
+
+class DescribeSessionAndCaptureHooks:
+    def test_sess01_track_records_edited_doc(self, tmp_path):
+        init_repo(tmp_path)
+        write(tmp_path, "a.md", "# A\n")  # session-edited (dirty) markdown
+        run_hook(tmp_path, CC_SESSION, "--track", payload={"session_id": "s1"}, session_id="s1")
+        state = sess_engine.read_docs_keeper_session(str(tmp_path), "s1")
+        assert state is not None and "a.md" in state["TrackedMd"]
+
+    def test_sess02_mark_revised_sets_flag(self, tmp_path):
+        run_hook(
+            tmp_path,
+            CC_SESSION,
+            "--mark-revised",
+            payload={"tool_input": {"skill": "revise", "args": "a.md"}, "session_id": "s2"},
+            session_id="s2",
+        )
+        state = sess_engine.read_docs_keeper_session(str(tmp_path), "s2")
+        assert state is not None and state["TrackedMd"].get("a.md", {}).get("revised") is True
+
+    def test_sess03_session_end_gcs_blank_leftover(self, tmp_path):
+        write(tmp_path, ".docs-keeper/session.old.json", "")  # blank leftover from another session
+        run_hook(tmp_path, CC_SESSION, "--session-end", payload={"session_id": "cur"}, session_id="cur")
+        assert not (tmp_path / ".docs-keeper" / "session.old.json").exists()
+
+    def test_cap01_capture_from_summary_records_entry(self, tmp_path):
+        run_hook(
+            tmp_path,
+            CC_CAPTURE,
+            "--capture-from-summary",
+            payload={"summary": "Decided to adopt X for Y.", "session_id": "c1"},
+            session_id="c1",
+        )
+        cf = cap_engine.read_docs_capture(cap_engine.get_docs_capture_file_path(str(tmp_path), "c1"))
+        assert cf is not None and cf.get("captures")
+        assert any("Decided to adopt X" in str(c) for c in cf["captures"])
