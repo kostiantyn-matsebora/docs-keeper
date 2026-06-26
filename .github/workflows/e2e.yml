@@ -1,0 +1,281 @@
+name: e2e
+
+# End-to-end test of docs-keeper as an installed Claude Code plugin.
+#
+# Two tiers:
+#   * engine-e2e   — deterministic, no secrets. Builds the plugin, asserts every
+#                    asset ships, and exercises the real hook entrypoints (the
+#                    PreToolUse commit gate + the neutral CI drift gate) by path
+#                    against a throwaway git fixture. Always runs.
+#   * agentic-e2e  — drives a real headless Claude Code session that imitates a
+#                    user: installs the plugin, runs /docs-keeper:setup, makes
+#                    code + doc changes, and proves the drift hooks keep the docs
+#                    synchronized. Gated on the ANTHROPIC_API_KEY (agent) and
+#                    EXAMPLE_REPO_TOKEN (clone of the private example host repo)
+#                    secrets; skipped with a warning when they are absent.
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "0 6 * * 1" # weekly, Monday 06:00 UTC
+
+permissions:
+  contents: read
+
+concurrency:
+  group: e2e-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # ---------------------------------------------------------------------------
+  # Tier 1 — deterministic engine / hook e2e (no API key required)
+  # ---------------------------------------------------------------------------
+  engine-e2e:
+    name: deterministic engine + hook e2e
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Assemble plugin from core (vendored trees in sync)
+        run: python3 build/assemble.py --check
+
+      - name: Assert installed plugin ships every asset
+        run: python3 e2e/assert_e2e.py install --plugin-root adapters/claude-code
+
+      - name: Build a throwaway host repo with documentation drift
+        run: |
+          set -euo pipefail
+          fix="$RUNNER_TEMP/gitfix"
+          mkdir -p "$fix/docs"
+          cd "$fix"
+          git init -q
+          git config user.email e2e@docs-keeper.test
+          git config user.name "docs-keeper e2e"
+          # An indexed dir whose index.md declares NO children yet.
+          printf -- '---\ntitle: Docs\nintro: '"'"'Docs.'"'"'\n---\n' > docs/index.md
+          printf '# Host\n\n## Sources of truth\n\n- `docs/` — Docs.\n' > CLAUDE.md
+          git add -A && git commit -qm "baseline"
+          # Stage a new doc the index does NOT declare -> index drift + unrevised md.
+          printf '# Payments\n\nPayment processing.\n' > docs/payments.md
+          git add docs/payments.md
+          echo "FIXTURE=$fix" >> "$GITHUB_ENV"
+
+      - name: PreToolUse commit gate blocks the drifting commit (exit 2)
+        run: |
+          set -uo pipefail
+          cd adapters/claude-code/hooks
+          payload='{"tool_input":{"command":"git commit -m wip"},"session_id":"e2e"}'
+          set +e
+          out="$(printf '%s' "$payload" | CLAUDE_PROJECT_DIR="$FIXTURE" python3 cc_maintenance.py 2>&1)"
+          code=$?
+          set -e
+          echo "$out"
+          echo "gate exit: $code"
+          test "$code" -eq 2
+          echo "$out" | grep -qi "drift"
+
+      - name: Neutral CI drift gate flags the drift (exit 2)
+        run: |
+          set +e
+          python3 core/engine/cli.py --drift-only --repo-root "$FIXTURE" --enforce block
+          code=$?
+          set -e
+          echo "drift gate exit: $code"
+          test "$code" -eq 2
+
+      - name: After indexing the new doc, both gates are clean (exit 0)
+        run: |
+          set -euo pipefail
+          # Resolve the drift the way the agent would: declare the new child.
+          printf -- '---\ntitle: Docs\nintro: '"'"'Docs.'"'"'\nchildren:\n  - /payments\n---\n' \
+            > "$FIXTURE/docs/index.md"
+          python3 e2e/assert_e2e.py index-declares --index "$FIXTURE/docs/index.md" --child /payments
+          python3 core/engine/cli.py --drift-only --repo-root "$FIXTURE" --enforce block
+          echo "clean drift gate exit: $?"
+
+  # ---------------------------------------------------------------------------
+  # Preflight — decide whether the agentic tier can run (secrets present?)
+  # ---------------------------------------------------------------------------
+  preflight:
+    name: agentic preflight (secret check)
+    runs-on: ubuntu-latest
+    outputs:
+      run_agentic: ${{ steps.check.outputs.run_agentic }}
+    steps:
+      - id: check
+        env:
+          HAS_KEY: ${{ secrets.ANTHROPIC_API_KEY != '' }}
+          HAS_TOKEN: ${{ secrets.EXAMPLE_REPO_TOKEN != '' }}
+        run: |
+          if [ "$HAS_KEY" = "true" ] && [ "$HAS_TOKEN" = "true" ]; then
+            echo "run_agentic=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "run_agentic=false" >> "$GITHUB_OUTPUT"
+            echo "::warning::Agentic e2e skipped — set repo secrets ANTHROPIC_API_KEY and EXAMPLE_REPO_TOKEN to enable it."
+          fi
+
+  # ---------------------------------------------------------------------------
+  # Tier 2 — full agentic e2e (real Claude Code session imitating a user)
+  # ---------------------------------------------------------------------------
+  agentic-e2e:
+    name: full agentic e2e (headless Claude Code)
+    needs: preflight
+    if: needs.preflight.outputs.run_agentic == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      DK: ${{ github.workspace }}/docs-keeper
+      EX: ${{ github.workspace }}/example
+      ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+      # Broad enough that the agent never stalls on a permission prompt in -p mode.
+      DK_TOOLS: "Bash,Read,Edit,Write,Glob,Grep,Skill,TodoWrite"
+      DK_FLAGS: "--permission-mode acceptEdits --output-format json"
+    steps:
+      - name: Checkout docs-keeper
+        uses: actions/checkout@v6
+        with:
+          path: docs-keeper
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Install Claude Code CLI
+        run: npm install -g @anthropic-ai/claude-code
+
+      - name: Re-assemble plugin (fresh vendored core)
+        run: python3 "$DK/build/assemble.py"
+
+      - name: Clone the private example host repo
+        env:
+          EXAMPLE_REPO_TOKEN: ${{ secrets.EXAMPLE_REPO_TOKEN }}
+        run: |
+          set -euo pipefail
+          git clone --depth 1 \
+            "https://x-access-token:${EXAMPLE_REPO_TOKEN}@github.com/kostiantyn-matsebora/docs-keeper-example.git" \
+            "$EX"
+          git -C "$EX" config user.email e2e@docs-keeper.test
+          git -C "$EX" config user.name "docs-keeper e2e"
+
+      # --- Phase 1: install the plugin and assert it took effect ---------------
+      - name: Install docs-keeper from the local marketplace
+        run: |
+          set -euo pipefail
+          claude plugin marketplace add "$DK"
+          claude plugin install docs-keeper@docs-keeper
+          claude plugin list
+          claude plugin list | grep -qi docs-keeper
+          # Belt-and-suspenders: enable the plugin (with hooks) for the example repo.
+          mkdir -p "$EX/.claude"
+          cat > "$EX/.claude/settings.local.json" <<JSON
+          {
+            "enabledPlugins": ["docs-keeper@docs-keeper"],
+            "extraKnownMarketplaces": {
+              "docs-keeper": { "source": { "source": "local", "path": "$DK" } }
+            }
+          }
+          JSON
+
+      - name: Assert plugin assets are all in place
+        run: python3 "$DK/e2e/assert_e2e.py" install --plugin-root "$DK/adapters/claude-code"
+
+      # --- Phase 2: run setup and assert a green baseline ----------------------
+      - name: Run /docs-keeper:setup
+        working-directory: ${{ env.EX }}
+        run: |
+          set -uo pipefail
+          claude -p "/docs-keeper:setup" --allowedTools "$DK_TOOLS" $DK_FLAGS \
+            > "$RUNNER_TEMP/setup.json" 2>&1 || true
+          cat "$RUNNER_TEMP/setup.json"
+
+      - name: Assert setup reached a green baseline
+        run: |
+          set -euo pipefail
+          python3 "$DK/e2e/assert_e2e.py" setup --repo "$EX"
+          python3 "$DK/core/engine/cli.py" --drift-only --repo-root "$EX" --enforce block
+          echo "post-setup drift gate exit: $?"
+
+      - name: Resolve an indexed directory to mutate
+        run: |
+          set -euo pipefail
+          dir="$(cd "$EX" && python3 -c "import os,sys; sys.path.insert(0,'$DK'); from e2e.assert_e2e import find_index_files; fs=find_index_files('.'); print(os.path.dirname(fs[0]) if fs else '.')")"
+          echo "INDEX_DIR=${dir#./}" >> "$GITHUB_ENV"
+          echo "Indexed dir under test: ${dir#./}"
+
+      # --- Phase 3: a code change, synchronized by the agent (commit gate) -----
+      - name: Make a code change and let the agent keep docs in sync
+        working-directory: ${{ env.EX }}
+        run: |
+          set -uo pipefail
+          # Enforce blocking so a premature commit is stopped by the PreToolUse gate.
+          printf '{\n  "enforcement": "block",\n  "paths": ["**/*.md"]\n}\n' > .docs-keeper/config.json
+          # A code change: append to the first source file we find (else create one).
+          src="$(find . -type f \( -name '*.py' -o -name '*.ts' -o -name '*.js' -o -name '*.go' -o -name '*.cs' -o -name '*.java' \) \
+                  -not -path '*/node_modules/*' -not -path '*/.git/*' | head -n1)"
+          if [ -z "$src" ]; then src="src/payments_processor.py"; mkdir -p src; fi
+          printf '\n# e2e: payments processor hook added by the e2e run\n' >> "$src"
+          # A new doc describing it — drift the agent must reconcile.
+          printf '# Payments processor\n\nProcesses payments for the Acme Stack.\n' > "${INDEX_DIR}/payments-processor.md"
+          claude -p "I changed the code file '$src' and added the doc '${INDEX_DIR}/payments-processor.md'. Keep the documentation synchronized: refresh the index.md indexes and the host 'Sources of truth' registry so there is no drift, then commit the result with git." \
+            --allowedTools "$DK_TOOLS" $DK_FLAGS > "$RUNNER_TEMP/code-change.json" 2>&1 || true
+          cat "$RUNNER_TEMP/code-change.json"
+
+      - name: Assert docs are synchronized after the code change
+        run: |
+          set -euo pipefail
+          python3 "$DK/core/engine/cli.py" --drift-only --repo-root "$EX" --enforce block
+          python3 "$DK/e2e/assert_e2e.py" index-declares \
+            --index "$EX/${INDEX_DIR}/index.md" --child /payments-processor
+          echo "Commits since clone:"; git -C "$EX" log --oneline -n 5 || true
+
+      # --- Phase 4: a documentation change, drift detected then fixed ----------
+      - name: Add a new doc (creates drift) and assert the gate detects it
+        working-directory: ${{ env.EX }}
+        run: |
+          set -uo pipefail
+          printf '# Refunds\n\nRefund handling for the Acme Stack.\n' > "${INDEX_DIR}/refunds.md"
+          set +e
+          python3 "$DK/core/engine/cli.py" --drift-only --repo-root "$EX" --enforce block
+          code=$?
+          set -e
+          echo "drift gate exit (expected 2): $code"
+          test "$code" -eq 2
+
+      - name: Run /docs-keeper:index and assert drift is resolved
+        working-directory: ${{ env.EX }}
+        run: |
+          set -uo pipefail
+          claude -p "/docs-keeper:index ${INDEX_DIR}/" --allowedTools "$DK_TOOLS" $DK_FLAGS \
+            > "$RUNNER_TEMP/doc-change.json" 2>&1 || true
+          cat "$RUNNER_TEMP/doc-change.json"
+
+      - name: Assert documentation is synchronized after the doc change
+        run: |
+          set -euo pipefail
+          python3 "$DK/core/engine/cli.py" --drift-only --repo-root "$EX" --enforce block
+          python3 "$DK/e2e/assert_e2e.py" index-declares \
+            --index "$EX/${INDEX_DIR}/index.md" --child /refunds
+          echo "documentation synchronized."
+
+      - name: Upload session transcripts and resulting docs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-artifacts
+          path: |
+            ${{ runner.temp }}/setup.json
+            ${{ runner.temp }}/code-change.json
+            ${{ runner.temp }}/doc-change.json
+            ${{ env.EX }}/**/index.md
+            ${{ env.EX }}/CLAUDE.md
+            ${{ env.EX }}/.docs-keeper/config.json
+          if-no-files-found: ignore
