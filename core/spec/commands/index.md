@@ -98,14 +98,23 @@ function visit(current, prefix, entries):
 Sub-indexes act as opaque boundaries — their contents are NOT enumerated by the parent.
 Idempotent: running on an unchanged tree produces the same list byte-for-byte.
 
+**Deterministic `children:` (binding).** Do NOT hand-enumerate the `children:` set. Obtain it
+from the engine, which computes this exact descent: `cli.py --emit-children <dir>` prints the
+authoritative entries (one per line) for `<dir>/index.md`. Author the front-matter `children:`
+from that output verbatim; spend authoring effort on prose / `## Contents` only. This guarantees
+the written index matches the drift gate by construction, so the result is reproducible across
+runs regardless of who (or which model) runs it.
+
 ## Steps
 
 1. **Check existence.** Glob the target. If `index.md` exists, read + classify: a
    stub/auto-generated index (front-matter + `## Contents` only) → proceed with `Edit`;
    a hand-authored index (narrative, owner front-matter, custom sections) → produce a
    proposed `index.md` + diff and return for confirmation; do NOT write.
-2. **Discover content.** Run the descent. For every Markdown file surfaced, capture
-   `^## ` second-layer headings. Do NOT descend into `###` unless host rules require.
+2. **Discover content.** Obtain the authoritative `children:` set from the engine
+   (`cli.py --emit-children <dir>`, per § *Deterministic `children:`*) — do not hand-enumerate.
+   Then, for every Markdown file surfaced, capture `^## ` second-layer headings for the
+   `## Contents` TOC. Do NOT descend into `###` unless host rules require.
 3. **Verify references.** Cross-check the discovered file list against sibling docs so
    you don't index files about to move.
 4. **Compose** the `index.md` (front-matter + optional narrative + `## Contents` TOC),

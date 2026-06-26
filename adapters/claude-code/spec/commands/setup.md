@@ -46,7 +46,10 @@ narrows *which directories* this run touches. Files outside `paths` are ignored.
 3. **Index the docs.** For each scope root, run the **`index`** procedure
    ([`index.md`](index.md)) — recursive-descent `children:` + ancestor walk-up — writing
    each `index.md`, honoring the configured `paths` globs from step 1. Skip a root that
-   already has an up-to-date `index.md` (idempotent).
+   already has an up-to-date `index.md` (idempotent). Take the `children:` set from the engine
+   (`cli.py --emit-children <dir>`, per index.md § *Deterministic `children:`*) — do NOT
+   free-hand it, and do NOT introduce sub-indexes here (a single index per scope root; splitting
+   is a later, explicit `index <sub>/` operation). This keeps the baseline reproducible.
 4. **Seed the registry (cold start).** Build the coverage map and identify ROOT indexes +
    uncovered unique docs per **`registry-sync`** § *Registry membership rule*. If the
    "Sources of truth" section is **absent**, create it and populate the bullet list. If it
@@ -55,9 +58,13 @@ narrows *which directories* this run touches. Files outside `paths` are ignored.
    host rules were found. If none, note that the bundled fallback
    ([`../conventions/index-authoring.md`](../conventions/index-authoring.md)) applies. Do
    NOT add authoring rules to the host.
-6. **Report.** List the config file (created vs already present), created `index.md` files,
+6. **Verify green (binding).** Setup's contract is a green baseline. Run the drift gate
+   (`cli.py --drift-only`); if it reports any `index <dir>/` or `registry-sync` drift, apply the
+   named fix (re-emit that dir's `children:`, reconcile the registry) and re-run the gate. Repeat
+   until it exits clean. Setup MUST NOT report success while the gate still reports drift.
+7. **Report.** List the config file (created vs already present), created `index.md` files,
    the registry section (created vs already present), the host prompt (created vs existing),
-   and the authoring-rules status.
+   the authoring-rules status, and the final drift-gate result (must be clean).
 
 ## Chaining
 

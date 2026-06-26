@@ -77,6 +77,8 @@ transcript scraping.
 | SETUP-07 | A | ⬜ | `setup docs/` scopes indexing to one root; siblings untouched |
 | SETUP-08 | A | ⬜ | Existing hand-authored `index.md` is not clobbered (proposed diff, not overwrite) |
 | SETUP-09 | A | ⬜ | Pre-existing `config.json` is read, not overwritten |
+| SETUP-10 | D | ✅ | `cli.py --emit-children <dir>` is deterministic + matches the gate's expected set (F3) |
+| SETUP-11 | A | 🟡 | Setup reaches green deterministically across repeated runs (F3 fix) — pending agentic re-run |
 
 - **SETUP-04.** *Pre:* `setup` ran. *Do:* `cli.py --drift-only --enforce block`. *Expect:* exit 0.
   F2 (repo-root index never satisfied the registry check) is fixed in the engine; the assertion is
@@ -188,6 +190,22 @@ which the bullet never contains — so a repo-root index could never satisfy the
 file reference (sub-dirs keep `<dir>/`), used by both `check_registry_has_entry` and
 `check_registry_role_in_sync`. Guarded by new `drift_test.py` cases + the EDGE-07 integration
 check; `setup` now reaches a green baseline on a root-level tree (SETUP-04).
+
+### F3 — `setup` was non-deterministic; didn't reliably reach a green baseline — **FIXED**
+
+The drift algorithm (`drift.get_expected_children`) is pure and byte-stable, but `setup`/`index`
+relied on the **agent** to hand-author the `children:` set from the spec. So the LLM's structure
+choice varied run-to-run: one run built 5 per-dir sub-indexes (gate-clean), another built a single
+flat root `index.md` whose `children:` didn't match the engine's recursive descent → residual
+`/index ./` drift, so the green baseline wasn't reached.
+
+**Fix (landed).** The engine now *emits* the authoritative set: `cli.py --emit-children <dir>`
+prints the exact descent the gate checks (deterministic, reproducible). `index.md` § *Deterministic
+`children:`* and `setup.md` step 3 make the procedure source `children:` from that emitter instead
+of free-handing it (and setup creates a single index per scope root — no ad-hoc sub-indexes).
+`setup.md` step 6 adds a binding **verify-green** loop: run the gate and converge until clean
+before reporting success. Guarded by SETUP-10 (deterministic emitter); the full-stack
+reproducibility confirms on the next agentic run (SETUP-11).
 
 ---
 
