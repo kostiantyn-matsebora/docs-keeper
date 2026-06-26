@@ -98,6 +98,12 @@ jobs:
           python3 core/engine/cli.py --drift-only --repo-root "$FIXTURE" --enforce block
           echo "clean drift gate exit: $?"
 
+      - name: Install pytest
+        run: python3 -m pip install --quiet pytest
+
+      - name: Black-box engine + hook cases (CODE/DOC/EDGE/CFG by path)
+        run: python3 -m pytest e2e/blackbox_test.py -q
+
   # ---------------------------------------------------------------------------
   # Preflight — decide whether the agentic tier can run (secrets present?)
   # ---------------------------------------------------------------------------
