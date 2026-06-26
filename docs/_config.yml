@@ -1,0 +1,16 @@
+title: docs-keeper
+description: A stack-, domain-, product-agnostic documentation steward for Claude Code — documentation writer, hierarchical indexer, and sources-of-truth registrar.
+
+theme: jekyll-theme-cayman
+
+url: https://kostiantyn-matsebora.github.io
+baseurl: /docs-keeper
+
+show_downloads: false
+
+exclude:
+  - Gemfile
+  - Gemfile.lock
+
+plugins:
+  - jekyll-seo-tag
