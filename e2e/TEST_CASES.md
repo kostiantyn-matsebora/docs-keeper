@@ -56,8 +56,8 @@ transcript scraping.
 | INST-05 | A | 🟡 | `claude plugin install` succeeds and the plugin is listed |
 | INST-06 | D | ✅ | `hooks.json` wraps events under a top-level `"hooks"` key (load-format guard, F1) |
 | INST-07 | A | ✅ | **Installed plugin's hooks LOAD** (`Status: loaded`) — F1 fixed; CONFIRMED loaded |
-| INST-08 | A | 🟡 | SessionStart hook fires (snapshot written under `.docs-keeper/` runtime state) |
-| INST-09 | A | 🟡 | `claude plugin validate --strict adapters/claude-code` passes |
+| INST-08 | A | ✅ | SessionStart hook fires (snapshot written under `.docs-keeper/` runtime state) |
+| INST-09 | A | ✅ | `claude plugin validate --strict adapters/claude-code` passes |
 
 - **INST-06.** *Do:* `assert_e2e.py install`. *Expect:* the wrapper check passes. This is the
   deterministic regression guard for F1 — a bare event map (no top-level `"hooks"`) fails to load.
@@ -72,11 +72,11 @@ transcript scraping.
 | SETUP-02 | A | ✅ | Per-directory `index.md` files built across the docs |
 | SETUP-03 | A | ✅ | Host prompt gains a "Sources of truth" section |
 | SETUP-04 | A | ✅ | **Post-setup drift gate is CLEAN (exit 0)** — F2 fixed; CONFIRMED green |
-| SETUP-05 | A | 🟡 | Idempotent — a second `setup` on a green repo writes no changes (`git diff` empty) |
-| SETUP-06 | A | 🟡 | No host prompt present → `setup` creates a minimal `CLAUDE.md` skeleton |
-| SETUP-07 | A | 🟡 | `setup docs/` scopes indexing to one root; siblings untouched |
-| SETUP-08 | A | 🟡 | Existing hand-authored `index.md` is not clobbered (proposed diff, not overwrite) |
-| SETUP-09 | A | 🟡 | Pre-existing `config.json` is read, not overwritten |
+| SETUP-05 | A | ✅ | Idempotent — a second `setup` on a green repo writes no changes (`git diff` empty) |
+| SETUP-06 | A | 🟡 | (extended; automated, run via `extended` dispatch) No host prompt present → `setup` creates a minimal `CLAUDE.md` skeleton |
+| SETUP-07 | A | 🟡 | (extended; automated, run via `extended` dispatch) `setup docs/` scopes indexing to one root; siblings untouched |
+| SETUP-08 | A | 🟡 | (extended; automated, run via `extended` dispatch) Existing hand-authored `index.md` is not clobbered (proposed diff, not overwrite) |
+| SETUP-09 | A | 🟡 | (extended; automated, run via `extended` dispatch) Pre-existing `config.json` is read, not overwritten |
 | SETUP-10 | D | ✅ | `cli.py --emit-children <dir>` is deterministic + matches the gate's expected set (F3) |
 | SETUP-11 | A | ✅ | Setup reaches green deterministically across repeated runs (F3 fix) — CONFIRMED across 3 runs |
 
@@ -116,10 +116,10 @@ transcript scraping.
 
 | ID | Tier | Status | Title |
 |---|---|---|---|
-| REV-01 | A | 🟡 | `/docs-keeper:revise <doc>` tightens prose without inventing decisions |
-| REG-01 | A | 🟡 | `/docs-keeper:registry-sync` reconciles a stale registry line |
-| REG-02 | A | 🟡 | `registry-sync` on a repo with no section halts and asks (no cold-create) |
-| SWEEP-01 | A | 🟡 | `/docs-keeper:sweep` reports orphans + broken links |
+| REV-01 | A | ✅ | `/docs-keeper:revise <doc>` tightens prose without inventing decisions |
+| REG-01 | A | ✅ | `/docs-keeper:registry-sync` reconciles a stale registry line |
+| REG-02 | A | 🟡 | (extended; automated, run via `extended` dispatch) `registry-sync` on a repo with no section halts and asks (no cold-create) |
+| SWEEP-01 | A | ✅ | `/docs-keeper:sweep` reports orphans + broken links |
 | SWEEP-02 | A | ⬜ | `sweep` flags a legacy-navigation README as a deprecation candidate |
 | CFG-01 | D | ✅ | `/docs-keeper:config enforcement block` persists + validates |
 | CFG-02 | D | ✅ | `config paths docs/**/*.md` replaces the watch globs |
