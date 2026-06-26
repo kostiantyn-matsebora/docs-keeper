@@ -13,9 +13,14 @@ absent), the same collaborator the drift engine consumes. The first setting is
 """
 
 import json
+from pathlib import Path
 
 # Repo-relative path; config.json sits beside the runtime state but is committed.
 CONFIG_REL_PATH = ".docs-keeper/config.json"
+
+# Settable keys + the enforcement enum, used by the config command's validation.
+VALID_ENFORCEMENT = ("warn", "block")
+SETTABLE_KEYS = ("enforcement", "paths")
 
 
 def load_config(file_reader) -> dict:
@@ -51,3 +56,63 @@ def get_index_globs(config: dict) -> list[str]:
     if not isinstance(value, list):
         return []
     return [p for p in value if isinstance(p, str) and p.strip()]
+
+
+# ---------------------------------------------------------------------------
+# Mutation (config command)
+# ---------------------------------------------------------------------------
+
+
+def normalize_setting(key: str, raw_values: list[str]) -> tuple:
+    """
+    Validate + coerce the string args for a settable key into its typed value.
+
+    Returns (value, error): error is '' on success, else a human-readable string
+    and value is None. `enforcement` takes exactly one of VALID_ENFORCEMENT;
+    `paths` takes one or more non-blank globs (whole array is replaced).
+    """
+    values = list(raw_values or [])
+    if key == "enforcement":
+        if len(values) != 1 or values[0] not in VALID_ENFORCEMENT:
+            return None, f"enforcement must be one of: {', '.join(VALID_ENFORCEMENT)}"
+        return values[0], ""
+    if key == "paths":
+        globs = [v for v in values if v and v.strip()]
+        if not globs:
+            return None, "paths requires at least one glob pattern"
+        return globs, ""
+    return None, f"unknown setting '{key}'; settable keys: {', '.join(SETTABLE_KEYS)}"
+
+
+def set_config_value(config: dict, key: str, value) -> dict:
+    """Return a new config dict with key set to value (does not mutate input)."""
+    updated = dict(config) if isinstance(config, dict) else {}
+    updated[key] = value
+    return updated
+
+
+def apply_setting(config: dict, key: str, raw_values: list[str]) -> tuple:
+    """
+    Validate and apply a single setting. Returns (new_config, error); on error
+    new_config is None and error is a human-readable message.
+    """
+    value, error = normalize_setting(key, raw_values)
+    if error:
+        return None, error
+    return set_config_value(config, key, value), ""
+
+
+def serialize_config(config: dict) -> str:
+    """Pretty, deterministic JSON for the committed config file (trailing newline)."""
+    return json.dumps(config or {}, indent=2, sort_keys=True) + "\n"
+
+
+def write_config(repo_root: str, config: dict) -> str:
+    """
+    Write config to `.docs-keeper/config.json` under repo_root, creating the
+    directory if absent. Returns the written path.
+    """
+    path = Path(repo_root or ".") / CONFIG_REL_PATH
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(serialize_config(config), encoding="utf-8")
+    return str(path)
