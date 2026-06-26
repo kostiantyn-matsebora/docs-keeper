@@ -138,9 +138,10 @@ jobs:
     env:
       DK: ${{ github.workspace }}/docs-keeper
       EX: ${{ github.workspace }}/example
-      # Pass through whichever auth the user configured (empty one is ignored).
-      ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+      # Prefer a subscription token when present; only fall back to the API key
+      # otherwise, so a stale/invalid ANTHROPIC_API_KEY can't shadow the token.
       CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+      ANTHROPIC_API_KEY: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN == '' && secrets.ANTHROPIC_API_KEY || '' }}
       # Broad enough that the agent never stalls on a permission prompt in -p mode.
       DK_TOOLS: "Bash,Read,Edit,Write,Glob,Grep,Skill,TodoWrite"
       DK_FLAGS: "--permission-mode acceptEdits --output-format json"
