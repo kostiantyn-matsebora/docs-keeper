@@ -18,6 +18,10 @@ on:
   workflow_dispatch:
   schedule:
     - cron: "0 6 * * 1" # weekly, Monday 06:00 UTC
+  # TEMPORARY: verify F1/F2 fixes end-to-end before this lands on the default
+  # branch (workflow_dispatch is only dispatchable from default). Remove once green.
+  push:
+    branches: [claude/docs-keeper-e2e-workflow-zmunho]
 
 permissions:
   contents: read

@@ -150,13 +150,18 @@ def check_install(plugin_root: str) -> list[tuple]:
     results.append((bool(manifest.get("hooks")), "plugin.json declares a hooks entry"))
 
     hooks_raw = read_text(os.path.join(plugin_root, "hooks", "hooks.json"))
-    hooks = {}
+    hooks_doc = {}
     try:
-        hooks = json.loads(hooks_raw) if hooks_raw else {}
+        hooks_doc = json.loads(hooks_raw) if hooks_raw else {}
     except (ValueError, TypeError):
-        hooks = {}
+        hooks_doc = {}
+    # Claude Code requires the event map wrapped under a top-level "hooks" key;
+    # a bare event map fails to load (see TEST_CASES.md § Findings F1).
+    has_wrapper = isinstance(hooks_doc, dict) and isinstance(hooks_doc.get("hooks"), dict)
+    results.append((has_wrapper, 'hooks.json wraps events under a top-level "hooks" key'))
+    events = hooks_doc.get("hooks") if has_wrapper else {}
     for event in EXPECTED_HOOK_EVENTS:
-        results.append((event in hooks, f"hooks.json wires {event}"))
+        results.append((event in events, f"hooks.json wires {event}"))
 
     results.append(
         (bool(read_text(os.path.join(plugin_root, "agents", "docs-keeper.md")).strip()), "agents/docs-keeper.md present")

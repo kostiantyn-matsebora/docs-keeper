@@ -30,7 +30,8 @@ def _make_plugin(root, *, complete=True):
     )
     (root / "hooks").mkdir()
     (root / "hooks" / "hooks.json").write_text(
-        '{"SessionStart": [], "PreToolUse": [], "PostToolUse": [], "Stop": [], "SessionEnd": []}', encoding="utf-8"
+        '{"hooks": {"SessionStart": [], "PreToolUse": [], "PostToolUse": [], "Stop": [], "SessionEnd": []}}',
+        encoding="utf-8",
     )
     (root / "hooks" / "_engine").mkdir()
     (root / "hooks" / "_engine" / "drift.py").write_text("X = 1\n", encoding="utf-8")
@@ -157,6 +158,13 @@ class DescribeCheckInstall:
         _make_plugin(tmp_path, complete=False)
         results = check_install(str(tmp_path))
         assert any(not ok and "sweep" in msg for ok, msg in results)
+
+    def test_flags_unwrapped_hooks(self, tmp_path):
+        # The bare-event-map format (no top-level "hooks" key) fails to load (F1).
+        _make_plugin(tmp_path)
+        (tmp_path / "hooks" / "hooks.json").write_text('{"SessionStart": []}', encoding="utf-8")
+        results = check_install(str(tmp_path))
+        assert any(not ok and "wraps events" in msg for ok, msg in results)
 
 
 class DescribeCheckSetup:
