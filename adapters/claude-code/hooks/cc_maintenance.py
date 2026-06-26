@@ -36,6 +36,7 @@ def invoke_docs_keeper_maintenance(
     file_reader=None,
     session_reader=None,
     enforcement_mode: str = "",
+    index_globs=None,
 ) -> dict:
     """
     PreToolUse orchestration — parse the CC payload, wire git/session/fs
@@ -86,6 +87,7 @@ def invoke_docs_keeper_maintenance(
         enforcement_mode=enforcement_mode,
         binding_gates_ref=CC_BINDING_GATES_REF,
         command_prefix=CC_COMMAND_PREFIX,
+        index_globs=index_globs,
     )
 
 
@@ -120,13 +122,15 @@ def main() -> None:
         except Exception:  # noqa: BLE001
             hook_input_json = ""
 
-    enforcement_mode = config.get_enforcement_setting(config.load_config(gitio.make_file_reader(repo_root)))
+    cfg = config.load_config(gitio.make_file_reader(repo_root))
+    enforcement_mode = config.get_enforcement_setting(cfg)
+    index_globs = config.get_index_globs(cfg)
     mode = drift.resolve_enforcement_mode(enforcement_mode)
 
     if args.drift_only:
         dl = gitio.make_dir_lister(repo_root)
         fr = gitio.make_file_reader(repo_root)
-        drift_queue = drift.get_docs_drift_queue(dl, fr)
+        drift_queue = drift.get_docs_drift_queue(dl, fr, index_globs=index_globs)
         if not drift_queue:
             sys.exit(0)
         msg = drift.format_block_message(
@@ -139,6 +143,7 @@ def main() -> None:
         hook_input_json=hook_input_json,
         repo_root=repo_root,
         enforcement_mode=enforcement_mode,
+        index_globs=index_globs,
     )
 
     if result["exit_code"] != 0 and result["message"]:

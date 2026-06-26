@@ -37,3 +37,17 @@ def get_enforcement_setting(config: dict) -> str:
     """Return the raw `enforcement` string from config ('' when unset)."""
     value = config.get("enforcement") if isinstance(config, dict) else None
     return str(value) if value is not None else ""
+
+
+def get_index_globs(config: dict) -> list[str]:
+    """
+    Return the `paths` glob patterns docs-keeper watches and indexes.
+
+    Returns [] when unset/invalid; callers fall back to the engine default
+    (`drift.INDEX_GLOBS_DEFAULT`, i.e. every `.md` in the repo). Non-string and
+    blank entries are dropped.
+    """
+    value = config.get("paths") if isinstance(config, dict) else None
+    if not isinstance(value, list):
+        return []
+    return [p for p in value if isinstance(p, str) and p.strip()]

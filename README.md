@@ -52,18 +52,25 @@ This registers the `docs-keeper` agent, the `/docs-keeper:*` commands
 (`setup` · `index` · `revise` · `sweep` · `registry-sync` · `capture`),
 and the SessionStart / PreToolUse / PostToolUse / PostCompact / Stop / SessionEnd hooks.
 
-Configure enforcement via `.docs-keeper/config.json`, a per-repo settings file you commit
+Configure docs-keeper via `.docs-keeper/config.json`, a per-repo settings file you commit
 alongside your docs:
 
 ```json
 {
-  "enforcement": "warn"
+  "enforcement": "warn",
+  "paths": ["**/*.md"]
 }
 ```
 
-`warn` surfaces the drift queue without blocking; `block` fails the commit (exit 2) on
-drift. Defaults to `block` when the file or setting is absent. The rest of `.docs-keeper/`
-is per-machine runtime state and stays gitignored — only `config.json` is committed.
+- **`enforcement`** — `warn` surfaces the drift queue without blocking; `block` fails the
+  commit (exit 2) on drift. Defaults to `block` when the file or setting is absent.
+- **`paths`** — array of glob patterns docs-keeper watches and indexes. Defaults to
+  `["**/*.md"]` (every Markdown file in the repo). Narrow it (`["docs/**/*.md"]`) or add
+  more globs (`["docs/**/*.md", "adr/**/*.md", "**/*.mdx"]`) to change scope. Globs support
+  `**/` (any depth), `*` (within a path segment), and `?`.
+
+The rest of `.docs-keeper/` is per-machine runtime state and stays gitignored — only
+`config.json` is committed.
 
 ### First run (bootstrap)
 

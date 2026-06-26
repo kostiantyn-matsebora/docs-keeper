@@ -22,7 +22,7 @@ from core.engine.session import (
     invoke_session_snapshot,
     read_merged_docs_keeper_sessions,
     remove_docs_session_state,
-    select_markdown_paths,
+    select_indexed_paths,
     set_tracked_md_revised,
     tracker_has_pending_work,
 )
@@ -78,14 +78,18 @@ class DescribeGetSessionEditedPaths:
         assert get_session_edited_paths([], [], []) == []
 
 
-class DescribeSelectMarkdownPaths:
-    def test_keeps_only_md_paths(self):
-        r = select_markdown_paths(["docs/a.md", "docs/b.yaml", "c.md"])
+class DescribeSelectIndexedPaths:
+    def test_keeps_only_md_paths_by_default(self):
+        r = select_indexed_paths(["docs/a.md", "docs/b.yaml", "c.md"])
         assert len(r) == 2
         assert "docs/b.yaml" not in r
 
     def test_returns_empty_when_no_markdown(self):
-        assert select_markdown_paths(["a.cs", "b.yaml"]) == []
+        assert select_indexed_paths(["a.cs", "b.yaml"]) == []
+
+    def test_honors_custom_globs(self):
+        r = select_indexed_paths(["docs/a.md", "site/b.mdx", "notes.md"], ["**/*.mdx"])
+        assert r == ["site/b.mdx"]
 
 
 class DescribeAddTrackedMdFiles:

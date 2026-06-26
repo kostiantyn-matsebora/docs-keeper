@@ -1,3 +1,4 @@
 {
-  "enforcement": "warn"
+  "enforcement": "warn",
+  "paths": ["**/*.md"]
 }

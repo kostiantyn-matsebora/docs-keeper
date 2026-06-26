@@ -9,6 +9,7 @@ import json
 from core.engine.config import (
     CONFIG_REL_PATH,
     get_enforcement_setting,
+    get_index_globs,
     load_config,
 )
 
@@ -48,3 +49,21 @@ class DescribeGetEnforcementSetting:
 
     def test_coerces_non_string_values_to_str(self):
         assert get_enforcement_setting({"enforcement": 0}) == "0"
+
+
+class DescribeGetIndexGlobs:
+    def test_returns_empty_when_unset(self):
+        assert get_index_globs({}) == []
+
+    def test_returns_empty_when_not_a_list(self):
+        assert get_index_globs({"paths": "**/*.md"}) == []
+
+    def test_returns_the_configured_globs(self):
+        assert get_index_globs({"paths": ["**/*.md"]}) == ["**/*.md"]
+
+    def test_supports_multiple_globs(self):
+        cfg = {"paths": ["docs/**/*.md", "**/*.mdx", "adr/**/*.md"]}
+        assert get_index_globs(cfg) == ["docs/**/*.md", "**/*.mdx", "adr/**/*.md"]
+
+    def test_drops_blank_and_non_string_entries(self):
+        assert get_index_globs({"paths": ["**/*.md", "", 7, "  ", "docs/*.md"]}) == ["**/*.md", "docs/*.md"]
