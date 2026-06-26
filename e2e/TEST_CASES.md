@@ -90,7 +90,7 @@ transcript scraping.
 | ID | Tier | Status | Title |
 |---|---|---|---|
 | CODE-01 | D | ✅ | PreToolUse gate blocks a drifting `git commit` (exit 2; queue names the commands) |
-| CODE-02 | A | 🟡 | Strict mode: code+doc change → commit → gate auto-syncs → **commit lands**, tree clean |
+| CODE-02 | A | 🟡 | Strict mode: code+doc change → integrator commits → gate auto-syncs → tree clean |
 | CODE-03 | A | 🟡 | New doc declared in its `index.md` after the auto-sync (incremental walk-up) |
 | CODE-04 | A | ⬜ | `warn` mode: commit is NOT blocked; advisory `systemMessage` emitted; commit lands as-is |
 | CODE-05 | A | ⬜ | Code-only change (no Markdown staged) → gate is silent (exit 0, `no-docs-change`) |
@@ -105,7 +105,7 @@ transcript scraping.
 | ID | Tier | Status | Title |
 |---|---|---|---|
 | DOC-01 | D | ✅ | Neutral CLI gate: clean tree exits 0, drifting tree exits 2 |
-| DOC-02 | A | 🟡 | Strict mode: new doc → commit → gate auto-syncs index/registry → commit lands, tree clean |
+| DOC-02 | A | 🟡 | Strict mode: new doc → integrator commits → gate auto-syncs index/registry → tree clean |
 | DOC-03 | A | 🟡 | Resolved index declares the new doc as a child (incremental, no full rebuild) |
 | DOC-04 | A | ⬜ | Deleted doc → walk-up removes its `children:` entry on the next commit; gate clean |
 | DOC-05 | A | ⬜ | Renamed doc → old slug dropped, new slug added in one incremental pass |
@@ -208,6 +208,16 @@ before reporting success. Guarded by SETUP-10 (deterministic emitter); the full-
 reproducibility confirms on the next agentic run (SETUP-11).
 
 ---
+
+## Harness notes (not docs-keeper bugs)
+
+- **The integrator's `git commit` is best-effort, not asserted.** docs-keeper never commits
+  (`role.md` § *Hand back*); the commit is the integrator's git action. In headless runs the
+  agent sometimes wraps the message in a `git commit -m "$(cat <<'EOF' … EOF)"` command
+  substitution, which Claude Code's permission layer denies even under `bypassPermissions`. So
+  the change-phases hard-assert docs-keeper's deterministic guarantee (gate detects drift → agent
+  syncs → tree clean + new doc declared) and only **log** whether a new commit landed. The
+  commit-gate *block* itself is covered deterministically by CODE-01 (PreToolUse by path).
 
 ## How to add a case
 
