@@ -25,9 +25,9 @@ from e2e.assert_e2e import (
 def _make_plugin(root, *, complete=True):
     """Lay down an assembled-plugin tree; drop one command when complete=False."""
     (root / ".claude-plugin").mkdir(parents=True)
-    (root / ".claude-plugin" / "plugin.json").write_text(
-        '{"name": "docs-keeper", "hooks": "./hooks/hooks.json"}', encoding="utf-8"
-    )
+    # No `hooks` field: the standard hooks/hooks.json is auto-loaded; referencing
+    # it from the manifest triggers "Duplicate hooks file detected" (F1).
+    (root / ".claude-plugin" / "plugin.json").write_text('{"name": "docs-keeper"}', encoding="utf-8")
     (root / "hooks").mkdir()
     (root / "hooks" / "hooks.json").write_text(
         '{"hooks": {"SessionStart": [], "PreToolUse": [], "PostToolUse": [], "Stop": [], "SessionEnd": []}}',
@@ -165,6 +165,15 @@ class DescribeCheckInstall:
         (tmp_path / "hooks" / "hooks.json").write_text('{"SessionStart": []}', encoding="utf-8")
         results = check_install(str(tmp_path))
         assert any(not ok and "wraps events" in msg for ok, msg in results)
+
+    def test_flags_manifest_referencing_standard_hooks(self, tmp_path):
+        # plugin.json pointing at the auto-loaded hooks/hooks.json => duplicate (F1).
+        _make_plugin(tmp_path)
+        (tmp_path / ".claude-plugin" / "plugin.json").write_text(
+            '{"name": "docs-keeper", "hooks": "./hooks/hooks.json"}', encoding="utf-8"
+        )
+        results = check_install(str(tmp_path))
+        assert any(not ok and "redundantly reference" in msg for ok, msg in results)
 
 
 class DescribeCheckSetup:

@@ -7,6 +7,5 @@
     "name": "docs-keeper maintainers"
   },
   "license": "MIT",
-  "keywords": ["documentation", "index", "markdown", "docs", "sources-of-truth", "drift"],
-  "hooks": "./hooks/hooks.json"
+  "keywords": ["documentation", "index", "markdown", "docs", "sources-of-truth", "drift"]
 }

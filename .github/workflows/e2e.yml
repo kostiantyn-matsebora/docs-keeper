@@ -175,24 +175,24 @@ jobs:
           git -C "$EX" config user.email e2e@docs-keeper.test
           git -C "$EX" config user.name "docs-keeper e2e"
 
-      # --- Phase 1: install the plugin and assert it took effect ---------------
-      - name: Install docs-keeper from the local marketplace
+      # --- Phase 1: install the plugin at PROJECT scope + assert it loaded -----
+      - name: Install docs-keeper into the example repo at project scope
+        working-directory: ${{ env.EX }}
         run: |
           set -euo pipefail
+          # Register the local marketplace for discovery, then enable the plugin
+          # at PROJECT scope: the enablement lands in the example repo's
+          # .claude/settings.json (committed, team-shared) — not user settings.
+          # Mirrors how a team installs docs-keeper for one repository.
           claude plugin marketplace add "$DK"
-          claude plugin install docs-keeper@docs-keeper
+          claude plugin install docs-keeper@docs-keeper --scope project
+          echo "== example repo .claude/settings.json (project scope) =="
+          cat .claude/settings.json
+          echo "== plugin status (must be loaded, hooks active) =="
           claude plugin list
-          claude plugin list | grep -qi docs-keeper
-          # Belt-and-suspenders: enable the plugin (with hooks) for the example repo.
-          mkdir -p "$EX/.claude"
-          cat > "$EX/.claude/settings.local.json" <<JSON
-          {
-            "enabledPlugins": ["docs-keeper@docs-keeper"],
-            "extraKnownMarketplaces": {
-              "docs-keeper": { "source": { "source": "local", "path": "$DK" } }
-            }
-          }
-          JSON
+          # Fail if the plugin did not load (e.g. hooks rejected — Finding F1).
+          claude plugin list | grep -qi "docs-keeper"
+          ! claude plugin list | grep -qi "failed to load"
 
       - name: Assert plugin assets are all in place
         run: python3 "$DK/e2e/assert_e2e.py" install --plugin-root "$DK/adapters/claude-code"

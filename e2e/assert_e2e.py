@@ -147,7 +147,14 @@ def check_install(plugin_root: str) -> list[tuple]:
     except (ValueError, TypeError):
         manifest = {}
     results.append((manifest.get("name") == "docs-keeper", f"plugin.json name == docs-keeper ({manifest_path})"))
-    results.append((bool(manifest.get("hooks")), "plugin.json declares a hooks entry"))
+    # Claude Code auto-loads the standard hooks/hooks.json; a manifest `hooks`
+    # field pointing back at it triggers "Duplicate hooks file detected" and the
+    # plugin fails to load (TEST_CASES.md § Findings F1). The manifest must NOT
+    # reference the standard file.
+    hooks_ref = manifest.get("hooks")
+    std_paths = ("./hooks/hooks.json", "hooks/hooks.json")
+    references_standard = hooks_ref in std_paths or (isinstance(hooks_ref, list) and any(p in std_paths for p in hooks_ref))
+    results.append((not references_standard, "plugin.json does not redundantly reference the auto-loaded hooks/hooks.json"))
 
     hooks_raw = read_text(os.path.join(plugin_root, "hooks", "hooks.json"))
     hooks_doc = {}
