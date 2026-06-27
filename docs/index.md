@@ -1,6 +1,6 @@
 ---
 title: docs-keeper
-description: "A documentation steward for Claude Code — builds your indexes, keeps a sources-of-truth registry, and catches doc drift at commit time."
+description: "A platform-agnostic documentation steward — keeps code and docs consistent both ways, and gives LLMs a hierarchical index to find the right doc fast, no MCP required."
 permalink: /
 ---
 
@@ -10,28 +10,41 @@ permalink: /
 [![CI](https://img.shields.io/github/actions/workflow/status/kostiantyn-matsebora/docs-keeper/ci.yml?branch=master&label=CI)](https://github.com/kostiantyn-matsebora/docs-keeper/actions/workflows/ci.yml)
 [![License](https://img.shields.io/badge/license-MIT-0f7a45)](https://github.com/kostiantyn-matsebora/docs-keeper/blob/master/LICENSE)
 
-A **documentation steward** for Claude Code. docs-keeper builds your per-directory indexes, keeps
-a "sources of truth" registry in sync, and **catches documentation drift at commit time** — so
-your docs never silently fall out of step with the code. It installs as a Claude Code plugin (an
-agent + `/docs-keeper:*` commands + hooks).
+**Documentation that can't drift from the code.**
 
-<ul class="features">
-  <li>🗂️ <strong>Indexes</strong> — per-directory <code>index.md</code> files, built and kept current incrementally (never a full rebuild).</li>
-  <li>🛡️ <strong>Drift gate</strong> — blocks (or warns on) a <code>git commit</code> when docs drift; tells you exactly what to fix.</li>
-  <li>📒 <strong>Registry</strong> — keeps the host prompt's "Sources of truth" section in sync.</li>
-  <li>🎯 <strong>Deterministic</strong> — indexes are computed by the engine, so the same tree always yields the same result.</li>
-</ul>
+Docs are written once and left behind. The code moves on; the docs don't. By the time someone
+reads one, it may already be wrong — and no one can tell which line went stale.
+
+docs-keeper makes docs a maintained system.
 
 ---
 
+## Why docs-keeper
+
+<ul class="features">
+  <li>🔁 <strong>Both-way sync</strong> — Change the code or the docs; docs-keeper pulls the other side back into step. Neither silently drifts.</li>
+  <li>🛡️ <strong>Commit-time gate</strong> — Drift can't sneak in. The commit blocks (or warns) the moment docs fall behind, and names exactly what to fix.</li>
+  <li>🗂️ <strong>Hierarchical index</strong> — An LLM finds the right doc in seconds — a map at every level it walks top-down. No grep, no whole-repo dump.</li>
+  <li>🔌 <strong>No MCP, no server</strong> — The index is plain <code>index.md</code> in your repo. Nothing to host or keep alive — unlike servers like <code>mcp-server-markdown</code>.</li>
+  <li>📒 <strong>Sources-of-truth registry</strong> — Your host prompt's canonical references stay current on their own.</li>
+  <li>🎯 <strong>Deterministic</strong> — Same tree, same index, every time. Computed by the engine — no LLM guesswork.</li>
+  <li>♻️ <strong>Incremental</strong> — Only what changed gets reindexed. Never a full rebuild.</li>
+  <li>🌐 <strong>Platform-agnostic</strong> — Stack-, domain-, and host-neutral core. Claude Code today; adapters stay thin.</li>
+</ul>
+
 ## Install
 
-docs-keeper is distributed from its GitHub repo as a single-plugin marketplace. In Claude Code:
+docs-keeper installs **per repository**, not per user — so the whole team (and CI) picks it up
+from one committed config. Run these in the repo you want to steward:
 
 ```
-/plugin marketplace add kostiantyn-matsebora/docs-keeper
-/plugin install docs-keeper@docs-keeper
+claude plugin marketplace add kostiantyn-matsebora/docs-keeper
+claude plugin install docs-keeper@docs-keeper --scope project
 ```
+
+`--scope project` writes the enablement into the repo's `.claude/settings.json` — commit that
+file and every collaborator gets docs-keeper automatically. A plain `/plugin install` inside a
+session enables it for **you** only; use project scope so it travels with the repo.
 
 > The repo is **private** — `marketplace add` works for anyone with GitHub access to it (Claude
 > Code uses your git credentials). Request access first if you don't have it.
@@ -104,13 +117,23 @@ The rest of `.docs-keeper/` is per-machine runtime state and stays gitignored �
 
 ## Use it in CI (no plugin needed)
 
-The engine ships a host-neutral drift gate you can run in any CI:
+The engine ships a host-neutral drift gate (stdlib-only Python 3.11+) — no Claude Code, no
+plugin. Check docs-keeper out alongside **your** repo and point the gate at your repo root:
 
-```
-python3 core/engine/cli.py --drift-only [--repo-root <path>] [--enforce warn|block]
+```yaml
+# .github/workflows/docs-drift.yml — in YOUR repo
+- uses: actions/checkout@v4                        # your repo, into the workspace
+- name: Fetch the docs-keeper engine (private repo — needs a token)
+  run: |
+    git clone --depth 1 \
+      "https://x-access-token:${{ secrets.DK_TOKEN }}@github.com/kostiantyn-matsebora/docs-keeper" \
+      /tmp/docs-keeper
+- name: Drift gate
+  run: python3 /tmp/docs-keeper/core/engine/cli.py --drift-only --repo-root . --enforce block
 ```
 
-Exit `0` (clean) or `2` (drift; message on stderr).
+`--repo-root` is the repo to check (`.` = your checkout); `--enforce warn|block` mirrors your
+`.docs-keeper/config.json`. Exit `0` (clean) or `2` (drift; message on stderr).
 
 ## Troubleshooting
 
