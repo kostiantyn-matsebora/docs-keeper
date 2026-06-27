@@ -1,0 +1,22 @@
+title: docs-keeper
+description: A stack-, domain-, and platform-agnostic documentation steward — documentation writer, hierarchical indexer, and sources-of-truth registrar.
+
+theme: jekyll-theme-cayman
+
+url: https://kostiantyn-matsebora.github.io
+baseurl: /docs-keeper
+
+show_downloads: false
+
+defaults:
+  - scope:
+      path: ""
+    values:
+      layout: default
+
+exclude:
+  - Gemfile
+  - Gemfile.lock
+
+plugins:
+  - jekyll-seo-tag
