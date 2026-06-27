@@ -135,6 +135,31 @@ plugin. Check docs-keeper out alongside **your** repo and point the gate at your
 `--repo-root` is the repo to check (`.` = your checkout); `--enforce warn|block` mirrors your
 `.docs-keeper/config.json`. Exit `0` (clean) or `2` (drift; message on stderr).
 
+## Alternatives & comparison
+
+docs-keeper occupies a niche no single tool covers: **agent-native, in-repo, structural
+documentation stewardship**. Adjacent tools each cover one slice; none unify
+**INDEX + REVISE + REGISTER + DRIFT GATE + CAPTURE + SWEEP**.
+
+| Competitor | Overlaps | docs-keeper does better |
+|---|---|---|
+| **Swimm** | Drift gate | Gates inside coding-agent hooks (not just PR-check time); watches all Markdown + indexes + registry, not only code-coupled snippets; no full-history requirement. |
+| **Doc Detective** | Consistency sweep | Static index/registry/link analysis with a fix queue, vs runtime tests against a live product. |
+| **lychee / markdown-link-check** | Broken links | Adds orphans, ambiguous resolutions, registry sync, and indexing — not links alone. |
+| **Mintlify `llms.txt`** | Indexing | Recursive per-directory `index.md` with ancestor walk-up, vs one flat hosted index (100K-char cap). |
+| **Docusaurus / MkDocs / Sphinx / Antora** | Nav + link check | Automatic code-to-docs drift detection and walk-up indexing, vs manual nav and release-snapshot versioning. |
+| **adr-log / Log4brains / Backstage** | Registry | Whole-repo sources-of-truth sync + drift gating, not ADR-scoped manual nav edits. |
+
+**Where docs-keeper wins:**
+
+- Commit-time drift gating wired into coding-agent hooks.
+- Hierarchical `index.md` generation with ancestor walk-up.
+- Agent-native decision capture during coding sessions.
+- Platform-neutral core + thin adapters.
+
+**Where established tools still lead:** hosting, versioning, ecosystem breadth, and
+non-Markdown/API docs.
+
 ## Troubleshooting
 
 - **The commit gate didn't fire.** It only runs when Claude Code runs `git commit` (a PreToolUse
