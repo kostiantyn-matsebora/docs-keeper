@@ -3,7 +3,7 @@
 docs-keeper core engine — doc-capture model + I/O (platform-neutral).
 
 Pure entry construction plus read/write of the per-session capture file
-(`.docs-keeper/capture.<sid>.json`). Surfacing (SessionStart proposal /
+(`.docs-keeper/sessions/capture.<sid>.json`). Surfacing (SessionStart proposal /
 SessionEnd report) lives in session.py alongside the session lifecycle.
 """
 
@@ -12,13 +12,18 @@ from pathlib import Path
 
 from .drift import get_safe_session_id
 
+# Per-session runtime state (session/capture/attempts files) lives under
+# .docs-keeper/sessions/, kept distinct from the committed, per-repo
+# .docs-keeper/config.json (see config.py). Shared with session.py.
+SESSIONS_REL_DIR = ".docs-keeper/sessions"
+
 
 def get_docs_capture_file_path(repo_root: str, session_id: str) -> str:
-    """Return the path to the capture.<sid>.json file."""
+    """Return the path to the sessions/capture.<sid>.json file."""
     base = repo_root if repo_root else "."
     sid = get_safe_session_id(session_id)
     name = f"capture.{sid}.json" if sid else "capture.json"
-    return str(Path(base) / ".docs-keeper" / name)
+    return str(Path(base) / SESSIONS_REL_DIR / name)
 
 
 # ---------------------------------------------------------------------------
@@ -81,7 +86,7 @@ def read_docs_capture(path: str) -> dict | None:
 
 
 def write_docs_capture(path: str, capture_file: dict) -> None:
-    """Writes the capture dict as JSON. Creates .docs-keeper/ dir if absent."""
+    """Writes the capture dict as JSON. Creates .docs-keeper/sessions/ dir if absent."""
     p = Path(path)
     p.parent.mkdir(parents=True, exist_ok=True)
     p.write_text(json.dumps(capture_file, separators=(",", ":")), encoding="utf-8")

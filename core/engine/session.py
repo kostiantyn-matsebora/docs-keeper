@@ -11,7 +11,7 @@ import json
 import re
 from pathlib import Path
 
-from .capture import get_docs_capture_file_path, read_docs_capture
+from .capture import SESSIONS_REL_DIR, get_docs_capture_file_path, read_docs_capture
 from .drift import get_safe_session_id, path_matches_globs
 
 __all__ = [
@@ -220,14 +220,14 @@ def find_pending_capture_files(
     file_reader,
 ) -> list[dict]:
     """
-    Pure. Scans .docs-keeper/ for capture.*.json files whose session id does
-    NOT match current_session_id. Returns list of parsed capture dicts that
+    Pure. Scans .docs-keeper/sessions/ for capture.*.json files whose session id
+    does NOT match current_session_id. Returns list of parsed capture dicts that
     have at least one entry in captures.
 
     dir_lister(rel_dir) -> list of {"Name": str, "IsDir": bool}
     file_reader(rel_path) -> str (raw file content, "" if absent)
     """
-    state_dir = ".docs-keeper"
+    state_dir = SESSIONS_REL_DIR
     safe_current = get_safe_session_id(current_session_id)
     dir_entries = dir_lister(state_dir)
     results = []
@@ -271,11 +271,11 @@ def find_pending_capture_files(
 
 
 def get_docs_keeper_session_path(repo_root: str = "", session_id: str = "") -> str:
-    """Return the path to session.<sid>.json (or session.json when no id)."""
+    """Return the path to sessions/session.<sid>.json (or session.json when no id)."""
     base = repo_root if repo_root else "."
     sid = get_safe_session_id(session_id)
     name = f"session.{sid}.json" if sid else "session.json"
-    return str(Path(base) / ".docs-keeper" / name)
+    return str(Path(base) / SESSIONS_REL_DIR / name)
 
 
 def read_docs_keeper_session(repo_root: str = "", session_id: str = "") -> dict | None:
@@ -304,7 +304,7 @@ def read_docs_keeper_session(repo_root: str = "", session_id: str = "") -> dict 
 def write_docs_keeper_session(repo_root: str, session_id: str, session: dict) -> None:
     """
     Writes the full session dict {"Head", "Dirty", "TrackedMd"} to
-    .docs-keeper/session.<sid>.json. Creates .docs-keeper/ dir if absent.
+    .docs-keeper/sessions/session.<sid>.json. Creates .docs-keeper/sessions/ dir if absent.
     """
     path = Path(get_docs_keeper_session_path(repo_root, session_id))
     path.parent.mkdir(parents=True, exist_ok=True)
@@ -313,11 +313,11 @@ def write_docs_keeper_session(repo_root: str, session_id: str, session: dict) ->
 
 def get_leftover_session_files(repo_root: str, current_session_id: str) -> list[str]:
     """
-    Finds all session.*.json files under .docs-keeper/ whose session id does
-    NOT match current_session_id. Returns list of absolute file paths.
+    Finds all session.*.json files under .docs-keeper/sessions/ whose session id
+    does NOT match current_session_id. Returns list of absolute file paths.
     """
     base = Path(repo_root) if repo_root else Path(".")
-    state_dir = base / ".docs-keeper"
+    state_dir = base / SESSIONS_REL_DIR
     if not state_dir.exists():
         return []
     safe_current = get_safe_session_id(current_session_id)
@@ -366,7 +366,7 @@ def read_merged_docs_keeper_sessions(
 
     Accepts injectable session_file_lister / session_file_reader for tests.
     """
-    docs_keeper_dir = Path(repo_root) / ".docs-keeper" if repo_root else Path(".docs-keeper")
+    docs_keeper_dir = Path(repo_root) / SESSIONS_REL_DIR if repo_root else Path(SESSIONS_REL_DIR)
 
     if session_file_lister is None:
 
@@ -447,7 +447,7 @@ def remove_docs_session_state(repo_root: str, session_id: str, git_runner_fn) ->
     base = Path(repo_root) if repo_root else Path(".")
     sid = get_safe_session_id(session_id)
     attempts_name = f"attempts.{sid}.json" if sid else "attempts.json"
-    attempts_file = base / ".docs-keeper" / attempts_name
+    attempts_file = base / SESSIONS_REL_DIR / attempts_name
     if attempts_file.exists():
         try:
             attempts_file.unlink(missing_ok=True)

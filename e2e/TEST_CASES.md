@@ -56,7 +56,7 @@ transcript scraping.
 | INST-05 | A | 🟡 | `claude plugin install` succeeds and the plugin is listed |
 | INST-06 | D | ✅ | `hooks.json` wraps events under a top-level `"hooks"` key (load-format guard, F1) |
 | INST-07 | A | ✅ | **Installed plugin's hooks LOAD** (`Status: loaded`) — F1 fixed; CONFIRMED loaded |
-| INST-08 | A | ✅ | SessionStart hook fires (snapshot written under `.docs-keeper/` runtime state) |
+| INST-08 | A | ✅ | SessionStart hook fires (snapshot written under `.docs-keeper/sessions/` runtime state) |
 | INST-09 | A | ✅ | `claude plugin validate --strict adapters/claude-code` passes |
 
 - **INST-06.** *Do:* `assert_e2e.py install`. *Expect:* the wrapper check passes. This is the

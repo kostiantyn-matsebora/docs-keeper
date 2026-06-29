@@ -1,7 +1,7 @@
 # config — procedure
 
 View or change docs-keeper's per-repo settings in `.docs-keeper/config.json` (the committed,
-shared settings file — NOT the gitignored runtime state beside it).
+shared settings file — NOT the gitignored runtime state under `.docs-keeper/sessions/`).
 
 > Platform-neutral procedure. The Claude Code adapter exposes it as `/docs-keeper:config` and
 > wires reads/writes to the bundled config entrypoint (`hooks/cc_config.py --get` / `--set`).
@@ -30,8 +30,11 @@ shared settings file — NOT the gitignored runtime state beside it).
    - `enforcement <warn|block>`
    - `paths <glob> [<glob> ...]` — pass the FULL desired list; the array is REPLACED, not
      merged. To add or drop a glob, read the current list (`--get`) and pass the new full set.
-4. **Never hand-edit `.docs-keeper/config.json`.** Route every write through the entrypoint so
-   validation runs and the file stays canonical; invalid values are rejected (non-zero exit).
+4. **Prefer the entrypoint over hand-editing `.docs-keeper/config.json`.** Routing writes
+   through the set action runs validation and keeps the file canonical; invalid values are
+   rejected (non-zero exit). Hand-editing is allowed — it is a plain JSON file — but
+   unvalidated: keep it valid JSON and use the documented keys/values (`enforcement` ∈
+   {`warn`,`block`}, `paths` an array of globs).
 5. **Report the result.** Show the resulting config and call out scope effects:
    ```
    Updated docs-keeper config:

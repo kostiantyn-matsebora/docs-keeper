@@ -2,9 +2,9 @@
 """
 docs-keeper core engine — repo configuration file (platform-neutral).
 
-Reads `.docs-keeper/config.json`, the per-repo settings file. Unlike the rest
-of `.docs-keeper/` — per-machine runtime state that is gitignored — config.json
-is *source*: committed and shared across the team.
+Reads `.docs-keeper/config.json`, the per-repo settings file. Unlike the
+per-machine runtime state under `.docs-keeper/sessions/` (session/capture files,
+gitignored), config.json is *source*: committed and shared across the team.
 
 Pure: I/O is delegated to an injected `file_reader(rel_path) -> str` ('' when
 absent), the same collaborator the drift engine consumes. The first setting is
