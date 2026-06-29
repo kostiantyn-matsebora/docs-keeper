@@ -7,6 +7,14 @@ READMEs are regular files, not legacy. Mode C.
 
 > Platform-neutral procedure. The Claude Code adapter exposes it as `/docs-keeper:sweep [optional-scope-path]`.
 
+## Indexed scope (binding)
+
+Only files matching the config `paths` globs (`.docs-keeper/config.json`, default `["**/*.md"]`
+— see [`config.md`](config.md)) are indexed. Resolve the effective globs from config (default
+applied when unset). Below, **doc file** means "a file matching `paths`", and the **indexed
+extensions** are those the globs imply (the default makes both "every `.md`"). Children entries
+are always extension-less; resolve them against the indexed extensions, not a hard-coded `.md`.
+
 ## Pre-flight (binding)
 
 Read-only by default. The **non-overwrite policy** from [`../role.md`](../role.md) still
@@ -23,19 +31,21 @@ before deciding what to flag. Default to content-bearing when ambiguous.
    file(s) exist and the description still matches.
 2. Walk every `index.md` in the doc roots. Parse front-matter `children:` and resolve every
    entry (leading `/` is sibling-relative to the parent index's own directory; paths may be
-   NESTED like `/sub/file`). Only Markdown is indexed, so every entry is extension-less:
-   - `/<a>/.../<name>` → try `<parent-dir>/<a>/.../<name>.md` first, then
-     `<parent-dir>/<a>/.../<name>/index.md`. Exactly one must exist; both → ambiguous;
-     neither → broken.
-3. Flag any **orphan**: a doc-shaped file (`.md` under doc roots) NOT reachable from any
-   index's `children:` chain AND NOT a registry unique-doc entry.
+   NESTED like `/sub/file`). Entries are extension-less, so resolve against the indexed
+   extensions:
+   - `/<a>/.../<name>` → try `<parent-dir>/<a>/.../<name>.<ext>` for each indexed extension
+     first, then `<parent-dir>/<a>/.../<name>/index.md`. Exactly one must exist; more than one
+     → ambiguous; none → broken.
+3. Flag any **orphan**: a **doc file** (matching `paths`, under doc roots) NOT reachable from
+   any index's `children:` chain AND NOT a registry unique-doc entry.
 4. Flag any **un-listed content-bearing README.md**: classified content-bearing but NOT in
    its nearest enclosing `index.md`'s `children:` (`/README` for a sibling, `/<sub>/README`
    deeper). Owner adds it — or `index <enclosing-dir>` picks it up.
 5. Flag any **broken cross-link**: a registry entry or `children:` path resolving to a
    non-existent file or directory.
-6. Flag any **ambiguous children resolution**: a `/<...>/<name>` matching BOTH `<name>.md`
-   AND `<name>/index.md` — owner disambiguates by adding the `.md` extension.
+6. Flag any **ambiguous children resolution**: a `/<...>/<name>` resolving to more than one
+   source (e.g. both `<name>.<ext>` and `<name>/index.md`, or two indexed extensions) — owner
+   disambiguates by adding the explicit extension.
 7. Flag any **legacy navigation README.md** ONLY: only Files+TOC tables, no
    narrative/metadata, with a sibling `index.md`. Content-bearing READMEs are NEVER flagged.
 8. Flag any **demoted ROOT**: a registry entry for an `index.md` now in some other index's

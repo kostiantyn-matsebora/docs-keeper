@@ -18,12 +18,24 @@ import sys
 
 try:  # package context (python3 -m core.engine.cli, or the vendored _engine package)
     from .config import get_enforcement_setting, get_index_globs, load_config
-    from .drift import format_block_message, get_docs_drift_queue, get_expected_children, resolve_enforcement_mode
+    from .drift import (
+        INDEX_GLOBS_DEFAULT,
+        format_block_message,
+        get_docs_drift_queue,
+        get_expected_children,
+        resolve_enforcement_mode,
+    )
     from .gitio import make_dir_lister, make_file_reader, resolve_repo_root_from_git
 except ImportError:  # script context (python3 <…>/cli.py) — flat sibling import, location-independent
     sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
     from config import get_enforcement_setting, get_index_globs, load_config
-    from drift import format_block_message, get_docs_drift_queue, get_expected_children, resolve_enforcement_mode
+    from drift import (
+        INDEX_GLOBS_DEFAULT,
+        format_block_message,
+        get_docs_drift_queue,
+        get_expected_children,
+        resolve_enforcement_mode,
+    )
     from gitio import make_dir_lister, make_file_reader, resolve_repo_root_from_git
 
 
@@ -55,6 +67,17 @@ def run_emit_children(repo_root: str, target_dir: str, index_globs=None) -> int:
     return 0
 
 
+def run_emit_globs(index_globs=None) -> int:
+    """
+    Print the EFFECTIVE index globs (config `paths`, or the engine default when
+    unset), one per line. Lets path-aware procedures (sweep, revise) and adapters
+    surface the exact glob set the engine indexes — instead of hard-coding `*.md`.
+    """
+    for glob in (index_globs or list(INDEX_GLOBS_DEFAULT)):
+        print(glob)
+    return 0
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description="docs-keeper neutral drift gate.")
     parser.add_argument("--drift-only", action="store_true", help="Index + registry drift check only.")
@@ -63,6 +86,11 @@ def main() -> None:
         metavar="DIR",
         default="",
         help="Print the deterministic children entries for DIR's index.md (one per line) and exit.",
+    )
+    parser.add_argument(
+        "--emit-globs",
+        action="store_true",
+        help="Print the effective index globs (config `paths`, else the default) one per line, and exit.",
     )
     parser.add_argument("--repo-root", default="", help="Repo working tree (default: git root / cwd).")
     parser.add_argument(
@@ -77,6 +105,9 @@ def main() -> None:
     config = load_config(make_file_reader(repo_root))
     enforcement_mode = args.enforce or get_enforcement_setting(config)
     index_globs = get_index_globs(config)
+
+    if args.emit_globs:
+        sys.exit(run_emit_globs(index_globs))
 
     if args.emit_children:
         sys.exit(run_emit_children(repo_root, args.emit_children, index_globs))

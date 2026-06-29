@@ -4,7 +4,7 @@ real tmp fixtures (no mocks, no API key, no LLM). Where the per-module pytest
 suites test engine functions in isolation, this exercises the actual CLI / hook
 contracts a host invokes:
 
-  * core/engine/cli.py            — `--drift-only`, `--emit-children`
+  * core/engine/cli.py            — `--drift-only`, `--emit-children`, `--emit-globs`
   * adapters/.../cc_maintenance.py — the PreToolUse commit gate
   * adapters/.../cc_config.py      — the config command
 
@@ -72,6 +72,16 @@ def emit_children(root, target="."):
     """Run the deterministic children emitter; return the list of entries."""
     r = subprocess.run(
         [sys.executable, str(CLI), "--emit-children", target, "--repo-root", str(root)],
+        capture_output=True,
+        text=True,
+    )
+    return [ln for ln in r.stdout.splitlines() if ln.strip()]
+
+
+def emit_globs(root):
+    """Run the effective-globs emitter; return the list of globs."""
+    r = subprocess.run(
+        [sys.executable, str(CLI), "--emit-globs", "--repo-root", str(root)],
         capture_output=True,
         text=True,
     )
@@ -294,6 +304,15 @@ class DescribeConfigCommand:
         assert code == 0
         cfg = json.loads((tmp_path / ".docs-keeper" / "config.json").read_text(encoding="utf-8"))
         assert cfg["paths"] == ["docs/**/*.md", "adr/**/*.md"]
+
+
+class DescribeEmitGlobs:
+    def test_emits_engine_default_when_no_config(self, tmp_path):
+        assert emit_globs(tmp_path) == ["**/*.md"]
+
+    def test_emits_the_configured_paths(self, tmp_path):
+        run_config_set(tmp_path, "paths", "docs/**/*.md", "**/*.mdx")
+        assert emit_globs(tmp_path) == ["docs/**/*.md", "**/*.mdx"]
 
 
 # ---------------------------------------------------------------------------
