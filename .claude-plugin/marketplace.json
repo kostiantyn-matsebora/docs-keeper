@@ -12,7 +12,7 @@
       "name": "docs-keeper",
       "source": "./adapters/claude-code",
       "description": "Documentation writer + hierarchical indexer + sources-of-truth registrar; agent + /docs-keeper:* commands + commit/session/capture hooks.",
-      "version": "0.2.0",
+      "version": "0.3.0",
       "category": "documentation"
     }
   ]
