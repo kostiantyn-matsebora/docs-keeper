@@ -56,9 +56,6 @@ claude plugin install docs-keeper@docs-keeper --scope project
 file and every collaborator gets docs-keeper automatically. A plain `/plugin install` inside a
 session enables it for **you** only; use project scope so it travels with the repo.
 
-> The repo is **private** — `marketplace add` works for anyone with GitHub access to it (Claude
-> Code uses your git credentials), so request access first if you don't have it.
-
 This registers the `docs-keeper` agent, the seven `/docs-keeper:*` commands (see
 [Commands](#commands)), and the SessionStart / PreToolUse / PostToolUse / PostCompact / Stop /
 SessionEnd hooks.

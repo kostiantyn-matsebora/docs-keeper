@@ -46,8 +46,7 @@ claude plugin install docs-keeper@docs-keeper --scope project
 file and every collaborator gets docs-keeper automatically. A plain `/plugin install` inside a
 session enables it for **you** only; use project scope so it travels with the repo.
 
-> The repo is **private** — `marketplace add` works for anyone with GitHub access to it (Claude
-> Code uses your git credentials). Request access first if you don't have it.
+> The repo is **public** — `marketplace add` works for anyone; no access request needed.
 
 Installing registers the agent, the `/docs-keeper:*` commands, and the commit/session hooks. It
 doesn't touch your repo yet.
@@ -123,11 +122,8 @@ plugin. Check docs-keeper out alongside **your** repo and point the gate at your
 ```yaml
 # .github/workflows/docs-drift.yml — in YOUR repo
 - uses: actions/checkout@v4                        # your repo, into the workspace
-- name: Fetch the docs-keeper engine (private repo — needs a token)
-  run: |
-    git clone --depth 1 \
-      "https://x-access-token:${{ secrets.DK_TOKEN }}@github.com/kostiantyn-matsebora/docs-keeper" \
-      /tmp/docs-keeper
+- name: Fetch the docs-keeper engine
+  run: git clone --depth 1 https://github.com/kostiantyn-matsebora/docs-keeper /tmp/docs-keeper
 - name: Drift gate
   run: python3 /tmp/docs-keeper/core/engine/cli.py --drift-only --repo-root . --enforce block
 ```
