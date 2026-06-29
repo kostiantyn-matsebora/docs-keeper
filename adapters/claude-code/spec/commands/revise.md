@@ -7,10 +7,14 @@ compact for files > 200 lines. Mode B. Without a path, targets all uncommitted d
 
 ## Target resolution (binding — runs before all steps)
 
+A **doc file** is one matching the config `paths` globs (`.docs-keeper/config.json`, default
+`["**/*.md"]` — see [`config.md`](config.md)). Resolve the effective globs from config
+(default applied when unset); the default makes "doc file" mean every `.md`.
+
 | Condition | Target |
 |---|---|
 | arguments non-empty | The path(s) supplied. |
-| arguments empty | All `*.md` with uncommitted changes: `git diff --name-only HEAD` (staged + unstaged) ∪ `git ls-files --others --exclude-standard` (untracked), filtered to `*.md`. Empty union → report "no uncommitted doc files found" and stop. |
+| arguments empty | All **doc files** with uncommitted changes: `git diff --name-only HEAD` (staged + unstaged) ∪ `git ls-files --others --exclude-standard` (untracked), filtered to the `paths` globs. Empty union → report "no uncommitted doc files found" and stop. |
 
 ## Pre-flight (binding)
 
