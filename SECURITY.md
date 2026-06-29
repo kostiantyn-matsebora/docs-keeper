@@ -22,7 +22,7 @@ You can expect:
 
 ## Supported Versions
 
-Only the latest minor version on `master` is actively supported. Older minor versions receive security fixes only when the upgrade path is non-trivial.
+Only the latest minor version on `main` is actively supported. Older minor versions receive security fixes only when the upgrade path is non-trivial.
 
 | Version | Supported |
 |---------|-----------|

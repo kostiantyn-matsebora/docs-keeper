@@ -1,11 +1,11 @@
 name: docs-site
 
 # Builds the Jekyll documentation site in docs/ and deploys it to GitHub Pages.
-# PRs build only (validation); deploy happens on push to master.
+# PRs build only (validation); deploy happens on push to main.
 
 on:
   push:
-    branches: [master]
+    branches: [main]
     paths:
       - "docs/**"
       - ".github/workflows/pages.yml"
