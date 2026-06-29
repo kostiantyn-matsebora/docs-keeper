@@ -7,8 +7,8 @@ permalink: /
 # docs-keeper
 
 [![Release](https://img.shields.io/github/v/release/kostiantyn-matsebora/docs-keeper?label=release&color=0f7a45)](https://github.com/kostiantyn-matsebora/docs-keeper/releases/latest)
-[![CI](https://img.shields.io/github/actions/workflow/status/kostiantyn-matsebora/docs-keeper/ci.yml?branch=master&label=CI)](https://github.com/kostiantyn-matsebora/docs-keeper/actions/workflows/ci.yml)
-[![License](https://img.shields.io/badge/license-MIT-0f7a45)](https://github.com/kostiantyn-matsebora/docs-keeper/blob/master/LICENSE)
+[![CI](https://img.shields.io/github/actions/workflow/status/kostiantyn-matsebora/docs-keeper/ci.yml?branch=main&label=CI)](https://github.com/kostiantyn-matsebora/docs-keeper/actions/workflows/ci.yml)
+[![License](https://img.shields.io/badge/license-MIT-0f7a45)](https://github.com/kostiantyn-matsebora/docs-keeper/blob/main/LICENSE)
 
 **Documentation that can't drift from the code.**
 
