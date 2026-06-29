@@ -3,6 +3,28 @@
 All notable changes to docs-keeper are recorded here. This project adheres to
 [Semantic Versioning](https://semver.org/).
 
+## 0.3.0 — config-aware sweep & revise, public release
+
+### Added
+
+- **`cli.py --emit-globs`** — prints the effective index globs (config `paths`, else the engine
+  default), one per line. The deterministic source path-aware procedures and adapters use to
+  surface the indexed glob set instead of assuming `.md`.
+
+### Changed
+
+- **`sweep` and `revise` now honor the config `paths` globs** instead of hard-coding `.md`. With a
+  custom `paths` (e.g. `["**/*.md", "**/*.mdx"]`), `sweep` resolves `children:` entries and detects
+  orphans against the configured extensions, and `revise`'s no-arg target resolution filters
+  uncommitted files to `paths`. The default `["**/*.md"]` preserves existing behavior. This closes
+  the gap where `index` / `setup` / the drift gate already respected `paths` but these two did not.
+
+### Project
+
+- **First public release.** Added `SECURITY.md`, GitHub issue / pull-request templates, and
+  `CODEOWNERS`; flipped the install docs from private to public; ignored Jekyll build artifacts
+  (`docs/_site/`, `docs/.sass-cache/`). Renamed the default branch `master` → `main`.
+
 ## 0.2.0 — runtime sessions split, docs site, deterministic indexing
 
 ### Added
