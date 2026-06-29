@@ -3,6 +3,32 @@
 All notable changes to docs-keeper are recorded here. This project adheres to
 [Semantic Versioning](https://semver.org/).
 
+## 0.2.0 — runtime sessions split, docs site, deterministic indexing
+
+### Added
+
+- **Adopter documentation site** (GitHub Pages) — landing page with install/CI guidance and an
+  "Alternatives & comparison" section ([`docs/`](docs/)).
+- **`setup` defaults notice** — on a cold start, `setup` now reports the seeded config defaults
+  (`enforcement`, `paths`) and how to change them (the `config` command, or hand-editing
+  `.docs-keeper/config.json`), plus a reminder to reindex after a `paths` change.
+
+### Changed
+
+- **Runtime state relocated to `.docs-keeper/sessions/`** — all per-session runtime files
+  (session / capture / attempts) now live under `.docs-keeper/sessions/`, leaving only the
+  committed `config.json` at the `.docs-keeper/` root for a clean config-vs-runtime split.
+- **`config` guidance relaxed** — hand-editing `.docs-keeper/config.json` is now explicitly
+  allowed (the `config` command is still preferred because it validates and canonicalizes).
+- **README aligned with the docs site** — per-repo `claude plugin install … --scope project`
+  install flow and a full 7-command table.
+
+### Fixed
+
+- **Deterministic children emission across platforms** — `get_expected_children` now returns
+  sorted entries, so `index` / `setup` build identical `children:` lists regardless of the
+  filesystem's directory-iteration order (previously diverged on Windows NTFS).
+
 ## 0.1.0 — first release
 
 First published release of the docs-keeper Claude Code plugin (platform-neutral core + the
