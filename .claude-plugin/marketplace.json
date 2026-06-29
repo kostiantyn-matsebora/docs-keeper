@@ -2,7 +2,7 @@
   "$schema": "https://json.schemastore.org/claude-code-marketplace.json",
   "name": "docs-keeper",
   "owner": {
-    "name": "docs-keeper maintainers"
+    "name": "Kostiantyn Matsebora"
   },
   "metadata": {
     "description": "Single-plugin marketplace for docs-keeper — the platform-neutral documentation steward, packaged as a Claude Code plugin."

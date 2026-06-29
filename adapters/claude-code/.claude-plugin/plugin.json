@@ -4,7 +4,7 @@
   "version": "0.3.0",
   "description": "Documentation writer + hierarchical indexer + sources-of-truth registrar — stack-, domain-, product-agnostic. Provides the docs-keeper agent, /docs-keeper:* commands, and commit/session/capture hooks backed by a platform-neutral core engine.",
   "author": {
-    "name": "docs-keeper maintainers"
+    "name": "Kostiantyn Matsebora"
   },
   "license": "MIT",
   "keywords": ["documentation", "index", "markdown", "docs", "sources-of-truth", "drift"]
