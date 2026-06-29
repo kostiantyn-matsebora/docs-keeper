@@ -131,8 +131,8 @@ class DescribeInvokeDocsKeeperMaintenanceIntegration:
         assert "/docs-keeper:index docs/api/" in result["message"]
 
     def test_default_session_reader_merges_revised_true_from_a_cross_session_file(self, tmp_path):
-        docs_keeper_dir = tmp_path / ".docs-keeper"
-        docs_keeper_dir.mkdir()
+        docs_keeper_dir = tmp_path / ".docs-keeper" / "sessions"
+        docs_keeper_dir.mkdir(parents=True)
         head = "abc123deadbeef000"
         (docs_keeper_dir / "session.other-session.json").write_text(
             json.dumps({"Head": head, "Dirty": [], "TrackedMd": {"docs/SAD.md": {"revised": True}}}),

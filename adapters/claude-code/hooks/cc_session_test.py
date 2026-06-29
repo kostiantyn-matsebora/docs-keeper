@@ -45,7 +45,7 @@ class DescribeSnapshotThenTrack:
         # SessionStart snapshot — baseline HEAD + dirty set.
         snap = _run(["--snapshot-session", "--repo-root", str(repo), "--session-id", sid], {"session_id": sid})
         assert snap.returncode == 0
-        session_file = repo / ".docs-keeper" / f"session.{sid}.json"
+        session_file = repo / ".docs-keeper" / "sessions" / f"session.{sid}.json"
         assert session_file.exists()
 
         # Edit a markdown file this "session".
@@ -70,5 +70,5 @@ class DescribeMarkRevised:
         payload = {"session_id": sid, "tool_input": {"skill": "revise", "args": "docs.md"}}
         result = _run(["--mark-revised", "--repo-root", str(repo), "--session-id", sid], payload)
         assert result.returncode == 0
-        data = json.loads((repo / ".docs-keeper" / f"session.{sid}.json").read_text())
+        data = json.loads((repo / ".docs-keeper" / "sessions" / f"session.{sid}.json").read_text())
         assert data["TrackedMd"]["docs.md"]["revised"] is True

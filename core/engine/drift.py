@@ -209,6 +209,10 @@ def get_expected_children(
     - index.md file itself -> skipped.
     - Matching files -> "/<prefix><basename>" (extension stripped).
     - Non-matching files -> skipped.
+
+    Entries are returned in a deterministic lexical order (sorted by Unicode code
+    point) so the emitted index is identical across platforms regardless of the
+    underlying filesystem's directory-iteration order.
     """
     entries = []
     for entry in dir_lister(dir_path):
@@ -230,7 +234,7 @@ def get_expected_children(
             if path_matches_globs(file_path, index_globs):
                 entries.append(f"/{prefix}{_index_entry_slug(name)}")
             # Non-matching files are not indexed.
-    return entries
+    return sorted(entries)
 
 
 def get_declared_children(content: str) -> list[str]:

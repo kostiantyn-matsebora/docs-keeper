@@ -39,7 +39,9 @@ narrows *which directories* this run touches. Files outside `paths` are ignored.
    `.docs-keeper/config.json` is **absent**, initialize it through the config entrypoint with
    the defaults — `enforcement` and `paths: ["**/*.md"]` — so the repo's settings are explicit
    and committable. If it already **exists**, do not overwrite; read it. The resulting `paths`
-   globs determine which files steps 3-4 index.
+   globs determine which files steps 3-4 index. When the file was created cold (defaults
+   applied), the report MUST surface those defaults and how to change them — see step 7's
+   *Defaults notice*.
 2. **Locate or create the host root prompt.** Probe `CLAUDE.md` → `AGENTS.md` →
    `.agent/INDEX.md`. If none exists, **create `CLAUDE.md`** with a minimal skeleton: an
    H1 title and an empty `## Sources of truth` section. Record the create in the report.
@@ -64,7 +66,8 @@ narrows *which directories* this run touches. Files outside `paths` are ignored.
    until it exits clean. Setup MUST NOT report success while the gate still reports drift.
 7. **Report.** List the config file (created vs already present), created `index.md` files,
    the registry section (created vs already present), the host prompt (created vs existing),
-   the authoring-rules status, and the final drift-gate result (must be clean).
+   the authoring-rules status, and the final drift-gate result (must be clean). When the
+   config was created cold, also emit the *Defaults notice* (below).
 
 ## Chaining
 
@@ -80,3 +83,21 @@ Use the **Documentation Report** ([`../templates/_output-template.md`](../templa
 Mode = E. Slots: config file (created / existing) + effective `paths`, created `index.md`
 files (with walk-up trace), registry section (created / synced), host root prompt
 (created / existing), authoring-rules status.
+
+### Defaults notice (cold start only — binding)
+
+Emit ONLY when step 1 created `.docs-keeper/config.json` from defaults (skip when the file
+already existed). Echo the **actual values written** (read them back via the config `--get`),
+do not hard-code them. Tell the user, plainly:
+
+- **Applied defaults.** `enforcement: <value>` · `paths: <globs>`.
+- **How to change.** Either run the config command (preferred — it validates and canonicalizes
+  the file):
+  - `/docs-keeper:config enforcement <warn|block>`
+  - `/docs-keeper:config paths <glob> [<glob> ...]` — pass the FULL list; the array is replaced.
+
+  …or hand-edit `.docs-keeper/config.json` directly (keep it valid JSON; same keys/values —
+  `enforcement` ∈ {`warn`,`block`}, `paths` an array of globs). The command path is recommended
+  because it rejects invalid values.
+- **Then reindex.** After changing `paths`, re-run `/docs-keeper:index` (or `/docs-keeper:setup`)
+  so the indexes reflect the new scope. An `enforcement`-only change needs no reindex.

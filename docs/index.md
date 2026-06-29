@@ -112,8 +112,8 @@ Edit it directly, or use the command:
 /docs-keeper:config paths docs/**/*.md adr/**/*.md  # replace the watch globs
 ```
 
-The rest of `.docs-keeper/` is per-machine runtime state and stays gitignored — only
-`config.json` is committed.
+Per-machine runtime state (session / capture files) lives under `.docs-keeper/sessions/` and
+stays gitignored — only `config.json` is committed.
 
 ## Use it in CI (no plugin needed)
 

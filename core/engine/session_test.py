@@ -122,13 +122,13 @@ class DescribeSetTrackedMdRevised:
 
 class DescribeFormatSessionStartProposal:
     def test_lists_tracker_file_and_unrevised_files(self):
-        msg = format_session_start_proposal([[".docs-keeper/session.abc.json", "README.md", "docs/foo.md"]])
+        msg = format_session_start_proposal([[".docs-keeper/sessions/session.abc.json", "README.md", "docs/foo.md"]])
         assert "README.md" in msg
         assert "docs/foo.md" in msg
         assert "session.abc.json" in msg
 
     def test_mentions_revise_snooze_dismiss_options(self):
-        msg = format_session_start_proposal([[".docs-keeper/session.abc.json", "README.md"]])
+        msg = format_session_start_proposal([[".docs-keeper/sessions/session.abc.json", "README.md"]])
         assert "revise" in msg
         assert "snooze" in msg
         assert "dismiss" in msg
@@ -165,8 +165,8 @@ class DescribeTrackerHasPendingWork:
 
 class DescribeRemoveDocsSessionState:
     def _write(self, tmp_path, sid, tracked):
-        dk = tmp_path / ".docs-keeper"
-        dk.mkdir(exist_ok=True)
+        dk = tmp_path / ".docs-keeper" / "sessions"
+        dk.mkdir(parents=True, exist_ok=True)
         f = Path(get_docs_keeper_session_path(str(tmp_path), sid))
         f.write_text(json.dumps({"Head": "H", "Dirty": [], "TrackedMd": tracked}), encoding="utf-8")
         return f
@@ -334,32 +334,32 @@ class DescribeFormatCaptureProposal:
 
 class DescribeFindPendingCaptureFiles:
     def test_skips_file_matching_current_session_id(self):
-        dl = make_dir_lister({".docs-keeper": [{"Name": "capture.abc.json", "IsDir": False}]})
-        fr = make_file_reader({".docs-keeper/capture.abc.json": '{"sessionId":"abc","captures":[{"content":"x","suggestedDoc":"","source":"manual","capturedAt":"T"}]}'})
+        dl = make_dir_lister({".docs-keeper/sessions": [{"Name": "capture.abc.json", "IsDir": False}]})
+        fr = make_file_reader({".docs-keeper/sessions/capture.abc.json": '{"sessionId":"abc","captures":[{"content":"x","suggestedDoc":"","source":"manual","capturedAt":"T"}]}'})
         assert len(find_pending_capture_files("/repo", "abc", dl, fr)) == 0
 
     def test_returns_parsed_files_from_other_sessions_that_have_captures(self):
-        dl = make_dir_lister({".docs-keeper": [{"Name": "capture.xyz.json", "IsDir": False}]})
-        fr = make_file_reader({".docs-keeper/capture.xyz.json": '{"sessionId":"xyz","captures":[{"content":"y","suggestedDoc":"docs/A.md","source":"manual","capturedAt":"T"}]}'})
+        dl = make_dir_lister({".docs-keeper/sessions": [{"Name": "capture.xyz.json", "IsDir": False}]})
+        fr = make_file_reader({".docs-keeper/sessions/capture.xyz.json": '{"sessionId":"xyz","captures":[{"content":"y","suggestedDoc":"docs/A.md","source":"manual","capturedAt":"T"}]}'})
         result = find_pending_capture_files("/repo", "abc", dl, fr)
         assert len(result) == 1
         assert result[0]["captures"][0]["content"] == "y"
 
     def test_skips_files_with_empty_captures_array(self):
-        dl = make_dir_lister({".docs-keeper": [{"Name": "capture.xyz.json", "IsDir": False}]})
-        fr = make_file_reader({".docs-keeper/capture.xyz.json": '{"sessionId":"xyz","captures":[]}'})
+        dl = make_dir_lister({".docs-keeper/sessions": [{"Name": "capture.xyz.json", "IsDir": False}]})
+        fr = make_file_reader({".docs-keeper/sessions/capture.xyz.json": '{"sessionId":"xyz","captures":[]}'})
         assert len(find_pending_capture_files("/repo", "abc", dl, fr)) == 0
 
     def test_returns_empty_when_no_matching_files(self):
         assert len(find_pending_capture_files("/repo", "abc", make_dir_lister({}), make_file_reader({}))) == 0
 
     def test_ignores_files_not_matching_capture_sid_json_naming(self):
-        dl = make_dir_lister({".docs-keeper": [
+        dl = make_dir_lister({".docs-keeper/sessions": [
             {"Name": "session.abc.json", "IsDir": False},
             {"Name": "attempts.abc.json", "IsDir": False},
             {"Name": "capture.xyz.json", "IsDir": False},
         ]})
-        fr = make_file_reader({".docs-keeper/capture.xyz.json": '{"sessionId":"xyz","captures":[{"content":"z","suggestedDoc":"","source":"manual","capturedAt":"T"}]}'})
+        fr = make_file_reader({".docs-keeper/sessions/capture.xyz.json": '{"sessionId":"xyz","captures":[{"content":"z","suggestedDoc":"","source":"manual","capturedAt":"T"}]}'})
         result = find_pending_capture_files("/repo", "other", dl, fr)
         assert len(result) == 1
         assert result[0]["captures"][0]["content"] == "z"

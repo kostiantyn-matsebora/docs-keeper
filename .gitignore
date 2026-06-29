@@ -4,7 +4,8 @@ __pycache__/
 .pytest_cache/
 .ruff_cache/
 
-# docs-keeper runtime state (per-machine, never source) — but keep the
-# committed config.json (per-repo settings, shared across the team).
+# docs-keeper runtime state (per-machine, never source) — session/capture files
+# live under .docs-keeper/sessions/. Keep the committed config.json (per-repo
+# settings, shared across the team).
 /.docs-keeper/*
 !/.docs-keeper/config.json

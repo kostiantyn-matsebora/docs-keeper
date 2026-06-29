@@ -73,7 +73,7 @@ class DescribeAddDocsCaptureEntry:
 
 class DescribeReadWriteRoundTrip:
     def test_write_then_read_returns_the_same_captures(self, tmp_path):
-        path = str(tmp_path / ".docs-keeper" / "capture.s.json")
+        path = str(tmp_path / ".docs-keeper" / "sessions" / "capture.s.json")
         cf = {"sessionId": "s", "captures": [new_docs_capture_entry("a", "docs/x.md", "manual", "T")]}
         write_docs_capture(path, cf)
         back = read_docs_capture(path)

@@ -23,7 +23,7 @@ the first; this repo doubles as its own single-plugin marketplace.
 core/
   engine/      Platform-neutral Python engine (pure drift/session/capture + git/fs
                collaborators) + a neutral `cli.py --drift-only` for CI on any platform.
-  spec/        Platform-neutral spec: role.md, conventions/, the 6 command procedures,
+  spec/        Platform-neutral spec: role.md, conventions/, the 7 command procedures,
                and companion templates (Documentation Report, anchor slugs).
 adapters/
   claude-code/ The Claude Code plugin: .claude-plugin/plugin.json, thin hooks/cc_*.py
@@ -43,18 +43,25 @@ platform's hook payload into engine calls at the edge. CI enforces this.
 
 ## Install (Claude Code)
 
-docs-keeper is distributed from this repository as a single-plugin marketplace. The repo is
-**private** — `marketplace add` works for anyone with GitHub access to it (Claude Code uses
-your git credentials), so request access first if you don't have it.
+docs-keeper is distributed from this repository as a single-plugin marketplace and installs
+**per repository**, not per user — so the whole team (and CI) picks it up from one committed
+config. Run these in the repo you want to steward:
 
 ```
-/plugin marketplace add kostiantyn-matsebora/docs-keeper
-/plugin install docs-keeper@docs-keeper
+claude plugin marketplace add kostiantyn-matsebora/docs-keeper
+claude plugin install docs-keeper@docs-keeper --scope project
 ```
 
-This registers the `docs-keeper` agent, the `/docs-keeper:*` commands
-(`setup` · `index` · `revise` · `sweep` · `registry-sync` · `capture` · `config`),
-and the SessionStart / PreToolUse / PostToolUse / PostCompact / Stop / SessionEnd hooks.
+`--scope project` writes the enablement into the repo's `.claude/settings.json` — commit that
+file and every collaborator gets docs-keeper automatically. A plain `/plugin install` inside a
+session enables it for **you** only; use project scope so it travels with the repo.
+
+> The repo is **private** — `marketplace add` works for anyone with GitHub access to it (Claude
+> Code uses your git credentials), so request access first if you don't have it.
+
+This registers the `docs-keeper` agent, the seven `/docs-keeper:*` commands (see
+[Commands](#commands)), and the SessionStart / PreToolUse / PostToolUse / PostCompact / Stop /
+SessionEnd hooks.
 
 Configure docs-keeper via `.docs-keeper/config.json`, a per-repo settings file you commit
 alongside your docs:
@@ -82,8 +89,8 @@ with validation:
 /docs-keeper:config paths docs/**/*.md adr/**/*.md  # replace the watch/index globs
 ```
 
-The rest of `.docs-keeper/` is per-machine runtime state and stays gitignored — only
-`config.json` is committed.
+Per-machine runtime state (session / capture files) lives under `.docs-keeper/sessions/` and
+stays gitignored — only `config.json` is committed.
 
 ### First run (bootstrap)
 
@@ -97,6 +104,18 @@ baseline — index your docs and create the "sources of truth" registry — run 
 
 After that, the commit-time gate and `/docs-keeper:index` · `revise` · `sweep` ·
 `registry-sync` keep things in sync.
+
+## Commands
+
+| Command | Use it when |
+|---|---|
+| `/docs-keeper:setup [roots...]` | First run — bootstrap config + indexes + registry |
+| `/docs-keeper:index <dir>` | A directory's docs changed, or you want to (re)build / split an index |
+| `/docs-keeper:revise [doc] [-- brief]` | Tighten an existing doc or author a new one |
+| `/docs-keeper:registry-sync` | The "Sources of truth" registry drifted |
+| `/docs-keeper:sweep [scope]` | Consistency check — orphans, broken links, legacy READMEs |
+| `/docs-keeper:capture` | Record a doc-worthy decision for later |
+| `/docs-keeper:config` | View or change settings |
 
 ## Use without a platform (neutral CI gate)
 

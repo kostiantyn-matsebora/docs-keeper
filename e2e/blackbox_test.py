@@ -321,9 +321,9 @@ class DescribeSessionAndCaptureHooks:
         assert state is not None and state["TrackedMd"].get("a.md", {}).get("revised") is True
 
     def test_sess03_session_end_gcs_blank_leftover(self, tmp_path):
-        write(tmp_path, ".docs-keeper/session.old.json", "")  # blank leftover from another session
+        write(tmp_path, ".docs-keeper/sessions/session.old.json", "")  # blank leftover from another session
         run_hook(tmp_path, CC_SESSION, "--session-end", payload={"session_id": "cur"}, session_id="cur")
-        assert not (tmp_path / ".docs-keeper" / "session.old.json").exists()
+        assert not (tmp_path / ".docs-keeper" / "sessions" / "session.old.json").exists()
 
     def test_cap01_capture_from_summary_records_entry(self, tmp_path):
         run_hook(
